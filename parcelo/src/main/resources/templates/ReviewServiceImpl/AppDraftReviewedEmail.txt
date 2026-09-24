@@ -1,1 +1,0 @@
-Your app draft with ID {appDraftId} has been {#if approved}approved{#else}rejected{/if}.

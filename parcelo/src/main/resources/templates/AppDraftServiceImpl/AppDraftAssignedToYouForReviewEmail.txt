@@ -1,1 +1,0 @@
-A new app draft with ID {appDraftId} has been assigned to you for review.

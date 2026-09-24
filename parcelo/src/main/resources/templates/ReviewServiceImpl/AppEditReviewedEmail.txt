@@ -1,1 +1,0 @@
-Your app edit with ID {appEditId} has been {#if approved}approved{#else}rejected{/if}.

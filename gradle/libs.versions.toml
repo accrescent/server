@@ -4,87 +4,47 @@
 
 [versions]
 agp = "9.3.1"
-apkanalyzer = "32.1.0"
 apksig = "9.1.0"
-appstore-api = "a980a6d649bc401dabdc0a9ec0df737b" # v1.0.3
 arrow = "2.2.2"
 binary-resources = "32.3.1"
-bucket4j = "8.17.0"
-buf = "0.11.0"
 bundletool = "1.18.3"
-console-api = "21c87adcd1444aa1a849c9360766d6cb" # v0.10.0
+compress = "1.28.0"
 detekt = "2.0.0-alpha.3"
-google-cloud-libraries-bom = "26.86.0"
-google-cloud-sql-postgres-socket-factory = "1.28.1"
-htmlunit = "4.21.0"
+flyway = "13.7.0"
+h2 = "2.5.250"
 jena-iri3986 = "6.1.0"
 junit = "6.1.1"
 kotlin = "2.4.10"
-minio = "8.6.0"
-protovalidate = "1.1.1"
-quarkus = "3.32.3"
+postgresql = "42.7.13"
+protobuf = "4.36.2"
+protobuf-plugin = "0.10.0"
+rest-assured = "6.0.1"
+testcontainers = "2.0.5"
 
 [libraries]
-apkanalyzer = { module = "com.android.tools.apkparser:apkanalyzer", version.ref = "apkanalyzer" }
 apksig = { module = "com.android.tools.build:apksig", version.ref = "apksig" }
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
-awaitility = { module = "org.awaitility:awaitility" }
 binary-resources = { module = "com.android.tools.apkparser:binary-resources", version.ref = "binary-resources" }
-bucket4j-postgresql = { module = "com.bucket4j:bucket4j_jdk17-postgresql", version.ref = "bucket4j" }
 bundletool = { module = "com.android.tools.build:bundletool", version.ref = "bundletool" }
-commons-compress = { module = "org.apache.commons:commons-compress" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "compress" }
 detekt-api = { module = "dev.detekt:detekt-api", version.ref = "detekt" }
 detekt-test = { module = "dev.detekt:detekt-test", version.ref = "detekt" }
 detekt-test-junit = { module = "dev.detekt:detekt-test-junit", version.ref = "detekt" }
-flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
-google-cloud-libraries-bom = { module = "com.google.cloud:libraries-bom", version.ref = "google-cloud-libraries-bom" }
-google-cloud-pubsub = { module = "com.google.cloud:google-cloud-pubsub" }
-google-cloud-sql-postgres-socket-factory = { module = "com.google.cloud.sql:postgres-socket-factory", version.ref = "google-cloud-sql-postgres-socket-factory" }
-google-cloud-storage = { module = "com.google.cloud:google-cloud-storage" }
-grpc-google-common-protos = { module = "com.google.api.grpc:grpc-google-common-protos" }
-htmlunit = { module = "org.htmlunit:htmlunit", version.ref = "htmlunit" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
 jena-iri3986 = { module = "org.apache.jena:jena-iri3986", version.ref = "jena-iri3986" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-minio = { module = "io.minio:minio", version.ref = "minio" }
-protobuf-java = { module = "com.google.protobuf:protobuf-java" }
-protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin" }
-protovalidate = { module = "build.buf:protovalidate", version.ref = "protovalidate" }
-quarkus-arc-deployment = { module = "io.quarkus:quarkus-arc-deployment" }
-quarkus-awt = { module = "io.quarkus:quarkus-awt" }
-quarkus-bom = { module = "io.quarkus:quarkus-bom", version.ref = "quarkus" }
-quarkus-builder = { module = "io.quarkus:quarkus-builder" }
-quarkus-core = { module = "io.quarkus:quarkus-core" }
-quarkus-devservices-common = { module = "io.quarkus:quarkus-devservices-common" }
-quarkus-extension-processor = { module = "io.quarkus:quarkus-extension-processor", version.ref = "quarkus" }
-quarkus-flyway = { module = "io.quarkus:quarkus-flyway" }
-quarkus-grpc = { module = "io.quarkus:quarkus-grpc" }
-quarkus-hibernate-orm-panache-kotlin = { module = "io.quarkus:quarkus-hibernate-orm-panache-kotlin" }
-quarkus-hibernate-validator = { module = "io.quarkus:quarkus-hibernate-validator" }
-quarkus-jaxb = { module = "io.quarkus:quarkus-jaxb" }
-quarkus-jdbc-h2 = { module = "io.quarkus:quarkus-jdbc-h2" }
-quarkus-jdbc-postgresql = { module = "io.quarkus:quarkus-jdbc-postgresql" }
-quarkus-junit = { module = "io.quarkus:quarkus-junit" }
-quarkus-kotlin = { module = "io.quarkus:quarkus-kotlin" }
-quarkus-mailer = { module = "io.quarkus:quarkus-mailer" }
-quarkus-oidc = { module = "io.quarkus:quarkus-oidc" }
-quarkus-quartz = { module = "io.quarkus:quarkus-quartz" }
-quarkus-qute = { module = "io.quarkus:quarkus-qute" }
-quarkus-rest-jackson = { module = "io.quarkus:quarkus-rest-jackson" }
-rest-assured = { module = "io.rest-assured:rest-assured" }
-testcontainers = { module = "org.testcontainers:testcontainers"  }
-testcontainers-gcloud = { module = "org.testcontainers:testcontainers-gcloud" }
-testcontainers-minio = { module = "org.testcontainers:testcontainers-minio" }
-testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+postgresql-jdbc = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
+protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
+rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-buf = { id = "build.buf", version.ref = "buf" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
-kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
-kotlin-jpa = { id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kotlin-kapt = { id = "org.jetbrains.kotlin.kapt" }
-quarkus = { id = "io.quarkus", version.ref = "quarkus" }
-quarkus-extension = { id = "io.quarkus.extension", version.ref = "quarkus" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }

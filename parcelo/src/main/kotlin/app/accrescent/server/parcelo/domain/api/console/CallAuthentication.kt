@@ -7,9 +7,9 @@ package app.accrescent.server.parcelo.domain.api.console
 import app.accrescent.server.parcelo.core.bindMapLeft
 import app.accrescent.server.parcelo.domain.crypto.Sha256Hash
 import app.accrescent.server.parcelo.domain.ports.driven.datastore.DataStore
-import app.accrescent.server.parcelo.domain.ports.driving.console.ServerError
-import app.accrescent.server.parcelo.domain.ports.driving.console.UnauthenticatedError
-import app.accrescent.server.parcelo.domain.ports.driving.console.toServerError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.ServerError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UnauthenticatedError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.toServerError
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option

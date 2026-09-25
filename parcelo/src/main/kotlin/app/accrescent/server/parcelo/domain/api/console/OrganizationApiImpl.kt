@@ -7,12 +7,12 @@ package app.accrescent.server.parcelo.domain.api.console
 import app.accrescent.server.parcelo.core.bindMapLeft
 import app.accrescent.server.parcelo.domain.ports.driven.datastore.DataStore
 import app.accrescent.server.parcelo.domain.ports.driven.timestampsource.TimestampSource
-import app.accrescent.server.parcelo.domain.ports.driving.console.CallContext
-import app.accrescent.server.parcelo.domain.ports.driving.console.GetMyOrganizationError
-import app.accrescent.server.parcelo.domain.ports.driving.console.GetMyOrganizationResponse
-import app.accrescent.server.parcelo.domain.ports.driving.console.Organization
-import app.accrescent.server.parcelo.domain.ports.driving.console.OrganizationApi
-import app.accrescent.server.parcelo.domain.ports.driving.console.toServerError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.CallContext
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.GetMyOrganizationError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.GetMyOrganizationResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.Organization
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.OrganizationApi
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.toServerError
 import arrow.core.Either
 import arrow.core.raise.either
 

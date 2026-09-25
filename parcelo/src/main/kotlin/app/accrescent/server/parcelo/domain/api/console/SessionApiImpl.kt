@@ -11,10 +11,10 @@ import app.accrescent.server.parcelo.domain.authn.ExternalUserId
 import app.accrescent.server.parcelo.domain.crypto.Sha256Hash
 import app.accrescent.server.parcelo.domain.ports.driven.datastore.DataStore
 import app.accrescent.server.parcelo.domain.ports.driven.timestampsource.TimestampSource
-import app.accrescent.server.parcelo.domain.ports.driving.console.CreateSessionError
-import app.accrescent.server.parcelo.domain.ports.driving.console.CreateSessionResponse
-import app.accrescent.server.parcelo.domain.ports.driving.console.SessionApi
-import app.accrescent.server.parcelo.domain.ports.driving.console.toServerError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.CreateSessionError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.CreateSessionResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.SessionApi
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.toServerError
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.Some

@@ -26,39 +26,39 @@ import app.accrescent.server.parcelo.domain.ports.driven.datastore.AppListing
 import app.accrescent.server.parcelo.domain.ports.driven.datastore.DataStore
 import app.accrescent.server.parcelo.domain.ports.driven.randomsource.RandomSource
 import app.accrescent.server.parcelo.domain.ports.driven.timestampsource.TimestampSource
-import app.accrescent.server.parcelo.domain.ports.driving.console.ActiveAppDraftLimitExceededError
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraftApi
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraftHasNoDefaultListingError
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraftHasNoPackageError
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraftListingAlreadyExistsError
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraftListingNotFoundError
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraftPackageNotFoundError
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraftSubmittedError
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraftSubmittedForAppIdError
-import app.accrescent.server.parcelo.domain.ports.driving.console.CallContext
-import app.accrescent.server.parcelo.domain.ports.driving.console.CreateAppDraftListingRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.CreateAppDraftRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.DeleteAppDraftListingRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.DeleteAppDraftRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.DownloadAppDraftRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.DownloadAppDraftResponse
-import app.accrescent.server.parcelo.domain.ports.driving.console.GetAppDraftListingRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.GetAppDraftListingResponse
-import app.accrescent.server.parcelo.domain.ports.driving.console.GetAppDraftRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.GetAppDraftResponse
-import app.accrescent.server.parcelo.domain.ports.driving.console.InsufficientPermissionError
-import app.accrescent.server.parcelo.domain.ports.driving.console.ListAppDraftListingsRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.ListAppDraftsRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.ListAppDraftsResponse
-import app.accrescent.server.parcelo.domain.ports.driving.console.PublishedAppLimitExceededError
-import app.accrescent.server.parcelo.domain.ports.driving.console.SubmitAppDraftRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.UnauthenticatedError
-import app.accrescent.server.parcelo.domain.ports.driving.console.UpdateAppDraftListingRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.UpdateAppDraftRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.UploadAppDraftListingIconRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.UploadAppDraftListingIconResponse
-import app.accrescent.server.parcelo.domain.ports.driving.console.UploadAppDraftRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.UploadAppDraftResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.ActiveAppDraftLimitExceededError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraftApi
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraftHasNoDefaultListingError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraftHasNoPackageError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraftListingAlreadyExistsError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraftListingNotFoundError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraftPackageNotFoundError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraftSubmittedError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraftSubmittedForAppIdError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.CallContext
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.CreateAppDraftListingRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.CreateAppDraftRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.DeleteAppDraftListingRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.DeleteAppDraftRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.DownloadAppDraftRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.DownloadAppDraftResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.GetAppDraftListingRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.GetAppDraftListingResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.GetAppDraftRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.GetAppDraftResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.InsufficientPermissionError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.ListAppDraftListingsRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.ListAppDraftsRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.ListAppDraftsResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.PublishedAppLimitExceededError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.SubmitAppDraftRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UnauthenticatedError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UpdateAppDraftListingRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UpdateAppDraftRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UploadAppDraftListingIconRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UploadAppDraftListingIconResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UploadAppDraftRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UploadAppDraftResponse
 import app.accrescent.server.parcelo.domain.uri.HttpUri
 import app.accrescent.server.parcelo.saveAppPackageFromNewUpload
 import app.accrescent.server.parcelo.signInNewUser
@@ -74,9 +74,9 @@ import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import kotlin.time.Duration.Companion.days
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraft as ApiAppDraft
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppDraftListing as ApiAppDraftListing
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppPackage as ApiAppPackage
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraft as ApiAppDraft
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppDraftListing as ApiAppDraftListing
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppPackage as ApiAppPackage
 
 class AppDraftApiImplTest {
     @Test

@@ -12,7 +12,7 @@ import app.accrescent.server.parcelo.domain.authn.ExternalUserId
 import app.accrescent.server.parcelo.domain.ports.driven.datastore.DataStore
 import app.accrescent.server.parcelo.domain.ports.driven.randomsource.RandomSource
 import app.accrescent.server.parcelo.domain.ports.driven.timestampsource.TimestampSource
-import app.accrescent.server.parcelo.domain.ports.driving.console.CallContext
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.CallContext
 import arrow.core.Some
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days

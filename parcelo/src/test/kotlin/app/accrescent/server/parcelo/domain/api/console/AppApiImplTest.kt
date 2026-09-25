@@ -15,13 +15,13 @@ import app.accrescent.server.parcelo.domain.appstore.ListingLanguage
 import app.accrescent.server.parcelo.domain.ports.driven.datastore.AppListing
 import app.accrescent.server.parcelo.domain.ports.driven.datastore.DataStore
 import app.accrescent.server.parcelo.domain.ports.driven.timestampsource.TimestampSource
-import app.accrescent.server.parcelo.domain.ports.driving.console.AppApi
-import app.accrescent.server.parcelo.domain.ports.driving.console.CallContext
-import app.accrescent.server.parcelo.domain.ports.driving.console.GetAppRequest
-import app.accrescent.server.parcelo.domain.ports.driving.console.GetAppResponse
-import app.accrescent.server.parcelo.domain.ports.driving.console.InsufficientPermissionError
-import app.accrescent.server.parcelo.domain.ports.driving.console.UnauthenticatedError
-import app.accrescent.server.parcelo.domain.ports.driving.console.UpdateAppRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.AppApi
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.CallContext
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.GetAppRequest
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.GetAppResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.InsufficientPermissionError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UnauthenticatedError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UpdateAppRequest
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.right
@@ -32,7 +32,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import kotlin.time.Duration.Companion.days
 import app.accrescent.server.parcelo.domain.ports.driven.datastore.App as DataApp
-import app.accrescent.server.parcelo.domain.ports.driving.console.App as ApiApp
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.App as ApiApp
 
 class AppApiImplTest {
     @Test

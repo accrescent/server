@@ -11,11 +11,11 @@ import app.accrescent.server.parcelo.core.unwrap
 import app.accrescent.server.parcelo.core.unwrapErr
 import app.accrescent.server.parcelo.domain.ports.driven.datastore.DataStore
 import app.accrescent.server.parcelo.domain.ports.driven.timestampsource.TimestampSource
-import app.accrescent.server.parcelo.domain.ports.driving.console.CallContext
-import app.accrescent.server.parcelo.domain.ports.driving.console.GetMyOrganizationResponse
-import app.accrescent.server.parcelo.domain.ports.driving.console.Organization
-import app.accrescent.server.parcelo.domain.ports.driving.console.OrganizationApi
-import app.accrescent.server.parcelo.domain.ports.driving.console.UnauthenticatedError
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.CallContext
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.GetMyOrganizationResponse
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.Organization
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.OrganizationApi
+import app.accrescent.server.parcelo.domain.ports.driving.api.console.UnauthenticatedError
 import arrow.core.None
 import arrow.core.Some
 import arrow.core.right

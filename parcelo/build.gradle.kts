@@ -9,6 +9,7 @@ import com.android.build.api.attributes.BuildTypeAttr
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
+    application
     alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.protobuf)
@@ -32,15 +33,20 @@ val testApks = configurations.create("testApks") {
 
 dependencies {
     implementation(libs.apksig)
+    implementation(libs.appstore.api.grpc.kotlin)
     implementation(libs.arrow.core)
     implementation(libs.binary.resources)
     implementation(libs.bundletool)
+    implementation(libs.console.api.grpc.kotlin)
     implementation(libs.flyway.database.postgresql)
     implementation(libs.h2)
     implementation(libs.jena.iri3986)
     implementation(libs.postgresql.jdbc)
     implementation(libs.protobuf.java)
     implementation(libs.protobuf.kotlin)
+    implementation(libs.vertx.grpcio.server)
+    implementation(libs.vertx.lang.kotlin.coroutines)
+    runtimeOnly(libs.slf4j.nop)
     detektPlugins(project(":detekt-rules"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.commons.compress)
@@ -55,6 +61,10 @@ dependencies {
 
 group = "app.accrescent.server"
 version = "0.16.0"
+
+application {
+    mainClass = "app.accrescent.server.parcelo.MainKt"
+}
 
 java {
     sourceCompatibility = JavaVersion.VERSION_25

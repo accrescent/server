@@ -5,10 +5,12 @@
 [versions]
 agp = "9.3.1"
 apksig = "9.1.0"
+appstore-api = "1.5.0.4.20260925005914.3c971eaae23c"
 arrow = "2.2.2"
 binary-resources = "32.3.1"
 bundletool = "1.18.3"
 compress = "1.28.0"
+console-api = "1.5.0.4.20260923203106.7e4273f6df99"
 detekt = "2.0.0-alpha.3"
 flyway = "13.7.0"
 h2 = "2.5.250"
@@ -19,14 +21,18 @@ postgresql = "42.7.13"
 protobuf = "4.36.2"
 protobuf-plugin = "0.10.0"
 rest-assured = "6.0.1"
+slf4j = "2.0.20"
 testcontainers = "2.0.5"
+vertx = "5.2.0"
 
 [libraries]
 apksig = { module = "com.android.tools.build:apksig", version.ref = "apksig" }
+appstore-api-grpc-kotlin = { module = "build.buf.gen:accrescent_appstore-api_grpc_kotlin", version.ref = "appstore-api" }
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 binary-resources = { module = "com.android.tools.apkparser:binary-resources", version.ref = "binary-resources" }
 bundletool = { module = "com.android.tools.build:bundletool", version.ref = "bundletool" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "compress" }
+console-api-grpc-kotlin = { module = "build.buf.gen:accrescent_console-api_grpc_kotlin", version.ref = "console-api" }
 detekt-api = { module = "dev.detekt:detekt-api", version.ref = "detekt" }
 detekt-test = { module = "dev.detekt:detekt-test", version.ref = "detekt" }
 detekt-test-junit = { module = "dev.detekt:detekt-test-junit", version.ref = "detekt" }
@@ -41,7 +47,10 @@ protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "p
 protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
 protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
+vertx-grpcio-server = { module = "io.vertx:vertx-grpcio-server", version.ref = "vertx" }
+vertx-lang-kotlin-coroutines = { module = "io.vertx:vertx-lang-kotlin-coroutines", version.ref = "vertx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

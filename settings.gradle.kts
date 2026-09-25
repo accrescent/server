@@ -13,6 +13,14 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         google()
+        exclusiveContent {
+            forRepository {
+                maven("https://buf.build/gen/maven")
+            }
+            filter {
+                includeGroup("build.buf.gen")
+            }
+        }
     }
 }
 pluginManagement {

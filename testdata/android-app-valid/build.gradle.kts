@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import app.accrescent.server.parcelo.build.ApkSetAttr
-import app.accrescent.server.parcelo.build.ApkSetNameAttr
+import app.accrescent.server.build.ApkSetAttr
+import app.accrescent.server.build.ApkSetNameAttr
 import com.android.SdkConstants
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.attributes.BuildTypeAttr
@@ -54,7 +54,7 @@ private val signingCert = run {
 
 plugins {
     alias(libs.plugins.android.application)
-    id("app.accrescent.server.parcelo.build.apk-set-attributes")
+    id("app.accrescent.server.build.apk-set-attributes")
 }
 
 // The server module depends on this module's APK set test data by these coordinates; the group lets

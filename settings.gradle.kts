@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-rootProject.name = "parcelo"
+rootProject.name = "server"
 
-include("detekt-rules", "parcelo")
+include("detekt-rules", "server")
 
 includeBuild("testdata")
 

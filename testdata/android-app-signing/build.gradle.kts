@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import app.accrescent.server.parcelo.build.ApkAttr
+import app.accrescent.server.build.ApkAttr
 import com.android.apksig.ApkSigner
 import com.android.apksig.KeyConfig
 import com.android.build.api.artifact.SingleArtifact
@@ -94,7 +94,7 @@ private val debugSigner = signerConfig("DEBUG", debugKey, debugCert)
 
 plugins {
     alias(libs.plugins.android.application)
-    id("app.accrescent.server.parcelo.build.apk-attributes")
+    id("app.accrescent.server.build.apk-attributes")
 }
 
 // The server module depends on this module's APK test data by these coordinates; the group lets the

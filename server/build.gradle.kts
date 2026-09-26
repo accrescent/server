@@ -44,6 +44,7 @@ dependencies {
     implementation(libs.postgresql.jdbc)
     implementation(libs.protobuf.java)
     implementation(libs.protobuf.kotlin)
+    implementation(libs.smallrye.config.core)
     implementation(libs.vertx.grpcio.server)
     implementation(libs.vertx.lang.kotlin.coroutines)
     runtimeOnly(libs.slf4j.nop)

@@ -22,6 +22,7 @@ protobuf = "4.36.2"
 protobuf-plugin = "0.10.0"
 rest-assured = "6.0.1"
 slf4j = "2.0.20"
+smallrye-config = "4.0.0"
 testcontainers = "2.0.5"
 vertx = "5.2.0"
 
@@ -48,6 +49,7 @@ protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref 
 protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
+smallrye-config-core = { module = "io.smallrye.config:smallrye-config-core", version.ref = "smallrye-config" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 vertx-grpcio-server = { module = "io.vertx:vertx-grpcio-server", version.ref = "vertx" }
 vertx-lang-kotlin-coroutines = { module = "io.vertx:vertx-lang-kotlin-coroutines", version.ref = "vertx" }

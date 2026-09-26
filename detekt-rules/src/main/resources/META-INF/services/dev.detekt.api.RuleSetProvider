@@ -1,1 +1,1 @@
-app.accrescent.server.parcelo.detekt.ParceloRuleSetProvider
+app.accrescent.server.detekt.AccrescentRuleSetProvider

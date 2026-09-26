@@ -4,13 +4,14 @@ SPDX-FileCopyrightText: © 2024 Logan Magee
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-# Parcelo
+# Accrescent server
 
 The next-generation Accrescent developer console.
 
 ## About
 
-Parcelo is the backend server technology that powers [Accrescent]. Parcelo currently features:
+The Accrescent server is the backend server technology that powers [Accrescent]. It currently
+features:
 
 - GitHub account login
 - User registration whitelisting

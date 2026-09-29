@@ -14,6 +14,7 @@ console-api = "1.5.0.4.20260923203106.7e4273f6df99"
 detekt = "2.0.0-alpha.3"
 flyway = "13.7.0"
 h2 = "2.5.250"
+jboss-logmanager = "3.2.2.Final"
 jena-iri3986 = "6.1.0"
 junit = "6.1.1"
 kotlin = "2.4.10"
@@ -22,6 +23,7 @@ protobuf = "4.36.2"
 protobuf-plugin = "0.10.0"
 rest-assured = "6.0.1"
 slf4j = "2.0.20"
+slf4j-jboss-logmanager = "2.1.0.Final"
 smallrye-config = "4.0.0"
 testcontainers = "2.0.5"
 vertx = "5.2.0"
@@ -39,6 +41,7 @@ detekt-test = { module = "dev.detekt:detekt-test", version.ref = "detekt" }
 detekt-test-junit = { module = "dev.detekt:detekt-test-junit", version.ref = "detekt" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
+jboss-logmanager = { module = "org.jboss.logmanager:jboss-logmanager", version.ref = "jboss-logmanager" }
 jena-iri3986 = { module = "org.apache.jena:jena-iri3986", version.ref = "jena-iri3986" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
@@ -48,6 +51,8 @@ protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "p
 protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
 protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-jboss-logmanager = { module = "org.jboss.slf4j:slf4j-jboss-logmanager", version.ref = "slf4j-jboss-logmanager" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 smallrye-config-core = { module = "io.smallrye.config:smallrye-config-core", version.ref = "smallrye-config" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }

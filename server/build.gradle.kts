@@ -31,6 +31,14 @@ val testApks = configurations.create("testApks") {
     attributes.attribute(BuildTypeAttr.ATTRIBUTE, objects.named(BuildTypeAttr::class, "release"))
 }
 
+val runtimeLogging = configurations.create("runtimeLogging") {
+    isCanBeResolved = false
+    isCanBeConsumed = false
+}
+configurations.runtimeClasspath {
+    extendsFrom(runtimeLogging)
+}
+
 dependencies {
     implementation(libs.apksig)
     implementation(libs.appstore.api.grpc.kotlin)
@@ -44,10 +52,12 @@ dependencies {
     implementation(libs.postgresql.jdbc)
     implementation(libs.protobuf.java)
     implementation(libs.protobuf.kotlin)
+    implementation(libs.slf4j.api)
     implementation(libs.smallrye.config.core)
     implementation(libs.vertx.grpcio.server)
     implementation(libs.vertx.lang.kotlin.coroutines)
-    runtimeOnly(libs.slf4j.nop)
+    runtimeLogging(libs.jboss.logmanager)
+    runtimeLogging(libs.slf4j.jboss.logmanager)
     detektPlugins(project(":detekt-rules"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.commons.compress)
@@ -55,6 +65,7 @@ dependencies {
     testImplementation(libs.rest.assured)
     testImplementation(libs.testcontainers.postgresql)
     testRuntimeOnly(libs.junit.platform.launcher)
+    testRuntimeOnly(libs.slf4j.nop)
     testApkSets("app.accrescent.server.testdata:android-app-low-target-sdk")
     testApkSets("app.accrescent.server.testdata:android-app-valid")
     testApks("app.accrescent.server.testdata:android-app-signing")
@@ -65,6 +76,7 @@ version = "0.16.0"
 
 application {
     mainClass = "app.accrescent.server.MainKt"
+    applicationDefaultJvmArgs = listOf("-Djava.util.logging.manager=org.jboss.logmanager.LogManager")
 }
 
 java {

@@ -8,13 +8,17 @@ import app.accrescent.server.adapters.driven.cfgloader.SmallRyeConfigLoader
 import app.accrescent.server.adapters.driving.api.vertx.ApiVerticle
 import app.accrescent.server.domain.ports.driven.cfgloader.ConfigLoadError
 import arrow.core.getOrElse
+import io.netty.util.NetUtil
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Vertx
 import io.vertx.core.VertxOptions
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandles
+import java.net.InetSocketAddress
 import java.util.function.Supplier
 import kotlin.system.exitProcess
+
+private const val VERSION = "0.16.0"
 
 fun main() {
     val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
@@ -43,4 +47,10 @@ fun main() {
         logger.error("Failed to start the server", deployment.cause())
         exitProcess(1)
     }
+
+    logger.info(
+        "Accrescent server {} started on {}",
+        VERSION,
+        NetUtil.toSocketAddressString(InetSocketAddress(config.address, config.port.value.toInt())),
+    )
 }

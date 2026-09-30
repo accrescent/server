@@ -18,9 +18,6 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-group = "app.accrescent.server"
-version = "0.16.0"
-
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25

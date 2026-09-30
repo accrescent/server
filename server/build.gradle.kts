@@ -71,9 +71,6 @@ dependencies {
     testApks("app.accrescent.server.testdata:android-app-signing")
 }
 
-group = "app.accrescent.server"
-version = "0.16.0"
-
 application {
     mainClass = "app.accrescent.server.MainKt"
     applicationDefaultJvmArgs = listOf("-Djava.util.logging.manager=org.jboss.logmanager.LogManager")

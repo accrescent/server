@@ -23,6 +23,7 @@ private const val VERSION = "0.16.0"
 fun main() {
     val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
 
+    // Load configuration
     val config = SmallRyeConfigLoader().loadConfig().getOrElse {
         when (it) {
             is ConfigLoadError.InvalidProperty -> logger.error(
@@ -37,8 +38,10 @@ fun main() {
         exitProcess(1)
     }
 
-    val deployment = Vertx.vertx().deployVerticle(
-        Supplier { ApiVerticle(config.address, config.port) },
+    // Start the gRPC server
+    val vertx = Vertx.vertx()
+    val deployment = vertx.deployVerticle(
+        Supplier { ApiVerticle(config.address, config.port, config.shutdownTimeout) },
         // The default is to use only one of the event loops, so ensure we use all of them
         DeploymentOptions().setInstances(VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE),
     )
@@ -46,6 +49,25 @@ fun main() {
     if (deployment.failed()) {
         logger.error("Failed to start the server", deployment.cause())
         exitProcess(1)
+    }
+
+    // Register a shutdown hook for graceful shutdown
+    try {
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                logger.info("Shutting down the server")
+                val close = vertx.close()
+                close.otherwiseEmpty().await()
+                if (close.failed()) {
+                    logger.error("Failed to shut down the server cleanly", close.cause())
+                } else {
+                    logger.info("Server shut down")
+                }
+            },
+        )
+    } catch (_: IllegalStateException) {
+        // The JVM is already shutting down, so there's nothing for us to do
+        return
     }
 
     logger.info(

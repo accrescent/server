@@ -7,29 +7,41 @@ package app.accrescent.server.adapters.driving.api.vertx
 import app.accrescent.server.adapters.driving.api.appstore.vertx.GrpcAppStoreApiServer
 import app.accrescent.server.adapters.driving.api.console.vertx.GrpcWebConsoleApiServer
 import app.accrescent.server.core.TcpPort
+import app.accrescent.server.domain.config.ShutdownTimeout
 import io.vertx.core.http.HttpHeaders
+import io.vertx.core.http.HttpServer
 import io.vertx.grpc.server.GrpcProtocol
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.coAwait
 import java.net.InetAddress
+import kotlin.time.toJavaDuration
 
 /**
  * A verticle which serves the console API and app store API.
  *
  * The console API is served over gRPC-Web, while the app store API is served over gRPC.
  *
+ * When stopped, the verticle stops accepting new connections and waits for in-flight requests to
+ * complete for the duration of [shutdownTimeout]. If there are still active requests after
+ * [shutdownTimeout], they are forcibly closed.
+ *
  * @param address the address to have the gRPC servers listen on.
  * @param port the port to have the gRPC servers listen on.
+ * @param shutdownTimeout the maximum amount of time to wait for in-flight requests to complete when
+ * stopping.
  */
 class ApiVerticle(
     private val address: InetAddress,
     private val port: TcpPort,
+    private val shutdownTimeout: ShutdownTimeout,
 ) : CoroutineVerticle() {
+    private lateinit var server: HttpServer
+
     override suspend fun start() {
         val consoleServer = GrpcWebConsoleApiServer(vertx, coroutineContext)
         val appStoreServer = GrpcAppStoreApiServer(vertx, coroutineContext)
 
-        vertx.createHttpServer()
+        server = vertx.createHttpServer()
             .requestHandler { request ->
                 // Route gRPC-Web requests to the console server and all other requests to the app
                 // store server
@@ -45,5 +57,9 @@ class ApiVerticle(
             }
             .listen(port.value.toInt(), address.hostAddress)
             .coAwait()
+    }
+
+    override suspend fun stop() {
+        server.shutdown(shutdownTimeout.value.toJavaDuration()).coAwait()
     }
 }

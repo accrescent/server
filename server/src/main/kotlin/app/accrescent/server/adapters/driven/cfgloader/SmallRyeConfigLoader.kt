@@ -6,6 +6,7 @@ package app.accrescent.server.adapters.driven.cfgloader
 
 import app.accrescent.server.core.TcpPort
 import app.accrescent.server.domain.config.ServerConfig
+import app.accrescent.server.domain.config.ShutdownTimeout
 import app.accrescent.server.domain.ports.driven.cfgloader.ConfigLoadError
 import app.accrescent.server.domain.ports.driven.cfgloader.ConfigLoader
 import arrow.core.Either
@@ -20,6 +21,7 @@ import java.net.InetAddress
 
 private const val ADDRESS_PROPERTY = "server.address"
 private const val PORT_PROPERTY = "server.port"
+private const val SHUTDOWN_TIMEOUT_PROPERTY = "server.shutdown-timeout"
 
 /**
  * A configuration loader which loads via
@@ -35,6 +37,12 @@ class SmallRyeConfigLoader : ConfigLoader {
         ServerConfig(
             address = loadProperty(config, ADDRESS_PROPERTY, INET_ADDRESS_LITERAL_CONVERTER).bind(),
             port = loadProperty(config, PORT_PROPERTY, TCP_PORT_CONVERTER).bind(),
+            shutdownTimeout = loadProperty(
+                config,
+                SHUTDOWN_TIMEOUT_PROPERTY,
+                SHUTDOWN_TIMEOUT_CONVERTER,
+            )
+                .bind(),
         )
     }
 
@@ -61,6 +69,14 @@ class SmallRyeConfigLoader : ConfigLoader {
                 ?.getOrNull()
                 ?: throw IllegalArgumentException(
                     "\"$value\" is not an integer in the range [1, 65535]"
+                )
+        }
+        private val SHUTDOWN_TIMEOUT_CONVERTER = Converters.newEmptyValueConverter { value ->
+            ShutdownTimeout.parse(value)
+                .getOrNull()
+                ?: throw IllegalArgumentException(
+                    "\"$value\" is not an integer in the range [0, 60] followed by an \"s\" " +
+                            "(e.g. \"30s\")"
                 )
         }
     }

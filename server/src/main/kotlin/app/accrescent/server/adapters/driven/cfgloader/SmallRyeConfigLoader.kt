@@ -17,9 +17,8 @@ import app.accrescent.server.domain.ports.driven.cfgloader.ConfigLoadError
 import app.accrescent.server.domain.ports.driven.cfgloader.ConfigLoader
 import app.accrescent.server.domain.uri.HttpUri
 import arrow.core.Either
-import arrow.core.left
+import arrow.core.raise.Raise
 import arrow.core.raise.either
-import arrow.core.right
 import io.smallrye.config.Converters
 import io.smallrye.config.SmallRyeConfig
 import io.smallrye.config.SmallRyeConfigBuilder
@@ -51,15 +50,13 @@ class SmallRyeConfigLoader : ConfigLoader {
                     config,
                     SERVER_ADDRESS_PROPERTY,
                     INET_ADDRESS_LITERAL_CONVERTER,
-                )
-                    .bind(),
-                port = loadProperty(config, SERVER_PORT_PROPERTY, TCP_PORT_CONVERTER).bind(),
+                ),
+                port = loadProperty(config, SERVER_PORT_PROPERTY, TCP_PORT_CONVERTER),
                 shutdownTimeout = loadProperty(
                     config,
                     SERVER_SHUTDOWN_TIMEOUT_PROPERTY,
                     SHUTDOWN_TIMEOUT_CONVERTER,
-                )
-                    .bind(),
+                ),
             ),
             authn = AuthnConfig(
                 github = GithubAuthnConfig(
@@ -67,44 +64,37 @@ class SmallRyeConfigLoader : ConfigLoader {
                         config,
                         AUTHN_GITHUB_CLIENT_ID_PROPERTY,
                         NON_EMPTY_STRING_CONVERTER,
-                    )
-                        .bind(),
+                    ),
                     clientSecret = loadProperty(
                         config,
                         AUTHN_GITHUB_CLIENT_SECRET_PROPERTY,
                         NON_EMPTY_STRING_CONVERTER,
-                    )
-                        .bind(),
+                    ),
                     redirectUri = loadProperty(
                         config,
                         AUTHN_GITHUB_REDIRECT_URI_PROPERTY,
                         HTTP_URI_CONVERTER,
-                    )
-                        .bind(),
+                    ),
                 ),
                 session = SessionConfig(
                     lifetime = loadProperty(
                         config,
                         AUTHN_SESSION_LIFETIME_PROPERTY,
                         SESSION_LIFETIME_CONVERTER,
-                    )
-                        .bind(),
+                    ),
                 ),
             ),
         )
     }
 
-    private fun <T> loadProperty(
-        config: SmallRyeConfig,
-        name: String,
-        converter: Converter<T>,
-    ): Either<ConfigLoadError, T> {
+    context(raise: Raise<ConfigLoadError>)
+    private fun <T> loadProperty(config: SmallRyeConfig, name: String, converter: Converter<T>): T {
         return try {
-            config.getValue(name, converter).right()
+            config.getValue(name, converter)
         } catch (e: IllegalArgumentException) {
-            ConfigLoadError.InvalidProperty(name, e.message.toString()).left()
+            raise.raise(ConfigLoadError.InvalidProperty(name, e.message.toString()))
         } catch (_: NoSuchElementException) {
-            ConfigLoadError.MissingProperty(name).left()
+            raise.raise(ConfigLoadError.MissingProperty(name))
         }
     }
 

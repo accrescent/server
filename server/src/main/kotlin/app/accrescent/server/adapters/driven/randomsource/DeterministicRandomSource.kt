@@ -34,6 +34,6 @@ class DeterministicRandomSource : RandomSource() {
             .new(rawValue)
             // nextLong() returns a value in [0, upperBound), so this conversion will never fail for
             // a conforming Random
-            .toEither { RandomSourceError }
+            .toEither(::RandomSourceError)
     }
 }

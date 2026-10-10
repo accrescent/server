@@ -46,6 +46,7 @@ jena-iri3986 = { module = "org.apache.jena:jena-iri3986", version.ref = "jena-ir
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 postgresql-jdbc = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
@@ -56,7 +57,9 @@ slf4j-jboss-logmanager = { module = "org.jboss.slf4j:slf4j-jboss-logmanager", ve
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 smallrye-config-core = { module = "io.smallrye.config:smallrye-config-core", version.ref = "smallrye-config" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
+vertx-auth-oauth2 = { module = "io.vertx:vertx-auth-oauth2", version.ref = "vertx" }
 vertx-grpcio-server = { module = "io.vertx:vertx-grpcio-server", version.ref = "vertx" }
+vertx-jdbc-client = { module = "io.vertx:vertx-jdbc-client", version.ref = "vertx" }
 vertx-lang-kotlin-coroutines = { module = "io.vertx:vertx-lang-kotlin-coroutines", version.ref = "vertx" }
 
 [plugins]

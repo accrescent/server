@@ -54,7 +54,9 @@ dependencies {
     implementation(libs.protobuf.kotlin)
     implementation(libs.slf4j.api)
     implementation(libs.smallrye.config.core)
+    implementation(libs.vertx.auth.oauth2)
     implementation(libs.vertx.grpcio.server)
+    implementation(libs.vertx.jdbc.client)
     implementation(libs.vertx.lang.kotlin.coroutines)
     runtimeLogging(libs.jboss.logmanager)
     runtimeLogging(libs.slf4j.jboss.logmanager)
@@ -65,6 +67,7 @@ dependencies {
     testImplementation(libs.rest.assured)
     testImplementation(libs.testcontainers.postgresql)
     testRuntimeOnly(libs.junit.platform.launcher)
+    testRuntimeOnly(libs.kotlin.reflect)
     testRuntimeOnly(libs.slf4j.nop)
     testApkSets("app.accrescent.server.testdata:android-app-low-target-sdk")
     testApkSets("app.accrescent.server.testdata:android-app-valid")
@@ -79,6 +82,11 @@ application {
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
+}
+
+// Ensure SmallRye Config picks up .env files in the repository root in development
+tasks.run {
+    workingDir = rootDir
 }
 
 tasks.withType<Test> {

@@ -4,13 +4,16 @@
 
 package app.accrescent.server.domain.ports.driven.randomsource
 
+import app.accrescent.server.core.Error
 import app.accrescent.server.core.NonNegativeLong
 import app.accrescent.server.core.PositiveLong
 import arrow.core.Either
 
 typealias RandomSourceResult<T> = Either<RandomSourceError, T>
 
-data object RandomSourceError
+class RandomSourceError : Error() {
+    override val message = "random source error"
+}
 
 abstract class RandomSource {
     abstract fun fillRandomBytes(bytes: ByteArray): RandomSourceResult<Unit>

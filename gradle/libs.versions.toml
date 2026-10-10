@@ -6,7 +6,7 @@
 agp = "9.3.1"
 apksig = "9.1.0"
 appstore-api = "1.5.0.4.20260925005914.3c971eaae23c"
-arrow = "2.2.2"
+arrow = "2.2.3"
 binary-resources = "32.3.1"
 bundletool = "1.18.3"
 compress = "1.28.0"

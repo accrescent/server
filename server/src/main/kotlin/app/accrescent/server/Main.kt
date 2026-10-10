@@ -5,8 +5,12 @@
 package app.accrescent.server
 
 import app.accrescent.server.adapters.driven.cfgloader.SmallRyeConfigLoader
+import app.accrescent.server.adapters.driven.datastore2.vertx.MemoryDataStore
+import app.accrescent.server.adapters.driven.randomsource.SecureRandomSource
+import app.accrescent.server.adapters.driven.timestampsource.SystemTimestampSource
 import app.accrescent.server.adapters.driving.api.vertx.ApiVerticle
-import app.accrescent.server.domain.ports.driven.cfgloader.ConfigLoadError
+import app.accrescent.server.domain.IdGenerator
+import app.accrescent.server.domain.api.authn.AuthenticationApiImpl
 import arrow.core.getOrElse
 import io.netty.util.NetUtil
 import io.vertx.core.DeploymentOptions
@@ -25,23 +29,37 @@ fun main() {
 
     // Load configuration
     val config = SmallRyeConfigLoader().loadConfig().getOrElse {
-        when (it) {
-            is ConfigLoadError.InvalidProperty -> logger.error(
-                "Invalid value for configuration property \"{}\": {}",
-                it.name,
-                it.message,
-            )
-
-            is ConfigLoadError.MissingProperty ->
-                logger.error("Missing required configuration property \"{}\"", it.name)
-        }
+        logger.error("Failed to load configuration: {}", it)
         exitProcess(1)
     }
 
-    // Start the gRPC server
+    // Set up the data store
     val vertx = Vertx.vertx()
+    val dataStore = MemoryDataStore(vertx)
+    dataStore.migrateToHead().getOrElse {
+        logger.error("Failed migrating database to latest schema: {}", it)
+        exitProcess(1)
+    }
+
+    // Set up the domain APIs
+    val randomSource = SecureRandomSource()
+    val authenticationApi = AuthenticationApiImpl(
+        dataStore = dataStore,
+        idGenerator = IdGenerator(randomSource),
+        sessionLifetime = config.authn.session.lifetime,
+        timestampSource = SystemTimestampSource(),
+    )
+
+    // Start the HTTP server
     val deployment = vertx.deployVerticle(
-        Supplier { ApiVerticle(config.address, config.port, config.shutdownTimeout) },
+        Supplier {
+            ApiVerticle(
+                serverConfig = config.server,
+                authnConfig = config.authn,
+                authenticationApi = authenticationApi,
+                randomSource = randomSource,
+            )
+        },
         // The default is to use only one of the event loops, so ensure we use all of them
         DeploymentOptions().setInstances(VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE),
     )
@@ -73,6 +91,7 @@ fun main() {
     logger.info(
         "Accrescent server {} started on {}",
         VERSION,
-        NetUtil.toSocketAddressString(InetSocketAddress(config.address, config.port.value.toInt())),
+        InetSocketAddress(config.server.address, config.server.port.value.toInt())
+            .let(NetUtil::toSocketAddressString),
     )
 }

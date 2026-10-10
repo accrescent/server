@@ -35,6 +35,6 @@ class SecureRandomSource : RandomSource() {
             .new(rawValue)
             // nextLong() returns a value in [0, upperBound), so this conversion will never fail for
             // a conforming SecureRandom
-            .toEither { RandomSourceError }
+            .toEither(::RandomSourceError)
     }
 }

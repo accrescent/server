@@ -4,7 +4,9 @@
 
 package app.accrescent.server.domain
 
+import app.accrescent.server.core.Error
 import app.accrescent.server.core.bindMapLeft
+import app.accrescent.server.core.causedBy
 import app.accrescent.server.domain.encoding.Base62
 import app.accrescent.server.domain.ports.driven.randomsource.RandomSource
 import arrow.core.Either
@@ -12,7 +14,12 @@ import arrow.core.raise.either
 
 private const val ID_BYTE_LENGTH = 16
 
-data object IdGenerationError
+/**
+ * An error which can occur when generating a resource ID.
+ */
+class IdGenerationError : Error() {
+    override val message = "failed to generate ID"
+}
 
 /**
  * Generator for resource identifiers.
@@ -30,7 +37,7 @@ class IdGenerator(private val randomSource: RandomSource) {
      */
     fun generateId(type: IdType): Either<IdGenerationError, String> = either {
         val randomBytes = ByteArray(ID_BYTE_LENGTH)
-            .also { randomSource.fillRandomBytes(it).bindMapLeft { IdGenerationError } }
+            .also { randomSource.fillRandomBytes(it).bindMapLeft { IdGenerationError().causedBy(it) } }
         val encodedBytes = Base62.encode(randomBytes)
         val prefix = when (type) {
             IdType.APP -> "app"

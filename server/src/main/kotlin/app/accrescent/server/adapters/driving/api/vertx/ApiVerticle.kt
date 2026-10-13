@@ -13,9 +13,7 @@ import app.accrescent.server.domain.config.ServerConfig
 import app.accrescent.server.domain.ports.driven.randomsource.RandomSource
 import app.accrescent.server.domain.ports.driving.api.authn.AuthenticationApi
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
-import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpHeaders
-import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServer
 import io.vertx.grpc.server.GrpcProtocol
 import io.vertx.kotlin.coroutines.CoroutineVerticle
@@ -54,16 +52,6 @@ class ApiVerticle(
                 // Route authentication requests to the authentication server
                 if (request.path()?.startsWith(AUTHN_PATH_PREFIX) == true) {
                     authnServer.handle(request)
-                    return@requestHandler
-                }
-
-                // gRPC and gRPC-Web require POST, but the Vert.x gRPC server doesn't enforce it.
-                // See https://github.com/eclipse-vertx/vertx-grpc/issues/376.
-                if (request.method() != HttpMethod.POST) {
-                    request.response()
-                        .setStatusCode(HttpResponseStatus.METHOD_NOT_ALLOWED.code())
-                        .putHeader(HttpHeaders.ALLOW, HttpMethod.POST.name())
-                        .end()
                     return@requestHandler
                 }
 

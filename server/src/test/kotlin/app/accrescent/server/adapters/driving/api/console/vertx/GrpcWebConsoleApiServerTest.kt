@@ -4,6 +4,9 @@
 
 package app.accrescent.server.adapters.driving.api.console.vertx
 
+import app.accrescent.server.adapters.driven.datastore2.vertx.MemoryDataStore
+import app.accrescent.server.adapters.driven.timestampsource.FixedTimestampSource
+import app.accrescent.server.domain.api.console2.ConsoleApiImpl
 import build.buf.gen.accrescent.console.v1.UserServiceGrpc
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.Vertx
@@ -53,6 +56,7 @@ class GrpcWebConsoleApiServerTest {
     companion object {
         private val vertx = Vertx.vertx()
         private val client = vertx.createHttpClient()
+        private val consoleApi = ConsoleApiImpl(MemoryDataStore(vertx), FixedTimestampSource())
         private lateinit var server: HttpServer
 
         /**
@@ -64,7 +68,7 @@ class GrpcWebConsoleApiServerTest {
         @JvmStatic
         fun startServer() {
             server = vertx.createHttpServer()
-                .requestHandler(GrpcWebConsoleApiServer(vertx, EmptyCoroutineContext))
+                .requestHandler(GrpcWebConsoleApiServer(vertx, EmptyCoroutineContext, consoleApi))
                 .listen(0, "localhost")
                 .await()
         }

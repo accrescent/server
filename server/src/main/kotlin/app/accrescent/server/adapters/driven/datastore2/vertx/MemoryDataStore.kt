@@ -11,6 +11,7 @@ import app.accrescent.server.domain.crypto.Sha256Hash
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreError
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreResult
+import app.accrescent.server.domain.ports.driven.datastore2.OrgApiView
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option
@@ -125,7 +126,7 @@ class MemoryDataStore(vertx: Vertx) : DataStore {
  *
  * @property connection the connection the transaction is running on.
  */
-private class MemoryTransaction(private val connection: SqlConnection) : DataStore.Transaction {
+private class MemoryTransaction(private val connection: SqlConnection) : DataStore.Transaction() {
     override suspend fun createOrgWithOwner(
         organizationId: String,
         userId: String,
@@ -162,6 +163,33 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
             "INSERT INTO sessions (id_hash, user_id, create_time, expire_time) VALUES (?, ?, ?, ?)",
             Tuple.of(idHash.digest().copyToByteArray(), userId, createTime, expireTime),
         )
+    }
+
+    override suspend fun findOrgApiViewByOwnerUserId(
+        userId: String,
+    ): DataStoreResult<Option<OrgApiView>> = either {
+        connection.executeOptionalQuery(
+            "SELECT id FROM organizations WHERE owner_user_id = ?",
+            Tuple.of(userId),
+        )
+            .map {
+                OrgApiView(
+                    id = it.requireValue<String>(0).bind(),
+                    publishedAppCount = 0u,
+                    activeAppDraftCount = 0u,
+                )
+            }
+    }
+
+    override suspend fun findUserIdByActiveSessionIdHash(
+        sessionIdHash: Sha256Hash,
+        currentTime: OffsetDateTime,
+    ): DataStoreResult<Option<String>> = either {
+        connection.executeOptionalQuery(
+            "SELECT user_id FROM sessions WHERE id_hash = ? AND expire_time > ?",
+            Tuple.of(sessionIdHash.digest().copyToByteArray(), currentTime),
+        )
+            .map { it.requireValue<String>(0).bind() }
     }
 
     override suspend fun findUserIdByExternalUserId(

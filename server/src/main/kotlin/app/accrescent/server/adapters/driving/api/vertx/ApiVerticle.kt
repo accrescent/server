@@ -12,6 +12,7 @@ import app.accrescent.server.domain.config.AuthnConfig
 import app.accrescent.server.domain.config.ServerConfig
 import app.accrescent.server.domain.ports.driven.randomsource.RandomSource
 import app.accrescent.server.domain.ports.driving.api.authn.AuthenticationApi
+import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpMethod
@@ -30,12 +31,14 @@ import kotlin.time.toJavaDuration
  * @param serverConfig the server configuration for the HTTP server.
  * @param authnConfig the user authentication configuration.
  * @param authenticationApi the user authentication API to use.
+ * @param consoleApi the console API to serve.
  * @param randomSource the source of randomness to use.
  */
 class ApiVerticle(
     private val serverConfig: ServerConfig,
     private val authnConfig: AuthnConfig,
     private val authenticationApi: AuthenticationApi,
+    private val consoleApi: ConsoleApi,
     private val randomSource: RandomSource,
 ) : CoroutineVerticle() {
     private lateinit var server: HttpServer
@@ -43,7 +46,7 @@ class ApiVerticle(
     override suspend fun start() {
         val authnServer =
             AuthnServer(vertx, coroutineContext, authnConfig, authenticationApi, randomSource)
-        val consoleServer = GrpcWebConsoleApiServer(vertx, coroutineContext)
+        val consoleServer = GrpcWebConsoleApiServer(vertx, coroutineContext, consoleApi)
         val appStoreServer = GrpcAppStoreApiServer(vertx, coroutineContext)
 
         server = vertx.createHttpServer()

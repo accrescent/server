@@ -7,10 +7,14 @@ package app.accrescent.server.adapters.driving.api.console.vertx
 import app.accrescent.server.adapters.driving.api.console.grpc.AppDraftServiceImpl
 import app.accrescent.server.adapters.driving.api.console.grpc.AppEditServiceImpl
 import app.accrescent.server.adapters.driving.api.console.grpc.AppServiceImpl
+import app.accrescent.server.adapters.driving.api.console.grpc.CallContextInterceptor
 import app.accrescent.server.adapters.driving.api.console.grpc.OrganizationServiceImpl
 import app.accrescent.server.adapters.driving.api.console.grpc.ReviewServiceImpl
 import app.accrescent.server.adapters.driving.api.console.grpc.UserServiceImpl
 import app.accrescent.server.adapters.driving.api.vertx.grpcServerOptions
+import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
+import io.grpc.BindableService
+import io.grpc.ServerInterceptors
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
@@ -19,6 +23,7 @@ import io.vertx.grpc.common.WireFormat
 import io.vertx.grpc.server.GrpcProtocol
 import io.vertx.grpc.server.GrpcServer
 import io.vertx.grpcio.server.GrpcIoServer
+import io.vertx.grpcio.server.GrpcIoServiceBridge
 import kotlin.coroutines.CoroutineContext
 
 private const val SEC_FETCH_SITE_HEADER_NAME = "Sec-Fetch-Site"
@@ -37,12 +42,14 @@ private const val SAME_ORIGIN = "same-origin"
  *
  * @param vertx the Vert.x object to attach the server to.
  * @param context the coroutine context to run service method implementations in.
+ * @param consoleApi the console API to serve.
  */
 class GrpcWebConsoleApiServer(
     vertx: Vertx,
     context: CoroutineContext,
+    consoleApi: ConsoleApi,
 ) : Handler<HttpServerRequest> {
-    private val server = createServer(vertx, context)
+    private val server = createServer(vertx, context, consoleApi)
 
     override fun handle(request: HttpServerRequest) {
         val secFetchSite = request.headers().getAll(SEC_FETCH_SITE_HEADER_NAME).singleOrNull()
@@ -55,15 +62,30 @@ class GrpcWebConsoleApiServer(
     }
 }
 
-private fun createServer(vertx: Vertx, context: CoroutineContext): GrpcServer {
+private fun createServer(
+    vertx: Vertx,
+    context: CoroutineContext,
+    consoleApi: ConsoleApi,
+): GrpcServer {
     val options = grpcServerOptions(GrpcProtocol.WEB, WireFormat.PROTOBUF)
     val server = GrpcIoServer.server(vertx, options)
-        .addService(AppDraftServiceImpl(context))
-        .addService(AppEditServiceImpl(context))
-        .addService(AppServiceImpl(context))
-        .addService(OrganizationServiceImpl(context))
-        .addService(ReviewServiceImpl(context))
-        .addService(UserServiceImpl(context))
+        .addInterceptedService(AppDraftServiceImpl(context))
+        .addInterceptedService(AppEditServiceImpl(context))
+        .addInterceptedService(AppServiceImpl(context))
+        .addInterceptedService(OrganizationServiceImpl(context, consoleApi))
+        .addInterceptedService(ReviewServiceImpl(context))
+        .addInterceptedService(UserServiceImpl(context))
 
     return server
+}
+
+/**
+ * Adds a service to this server with [CallContextInterceptor] applied.
+ *
+ * @param service the service to add.
+ * @return this server.
+ */
+private fun GrpcServer.addInterceptedService(service: BindableService): GrpcServer {
+    val interceptedService = ServerInterceptors.intercept(service, CallContextInterceptor())
+    return addService(GrpcIoServiceBridge.bridge(interceptedService))
 }

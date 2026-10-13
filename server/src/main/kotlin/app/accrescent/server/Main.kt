@@ -11,6 +11,7 @@ import app.accrescent.server.adapters.driven.timestampsource.SystemTimestampSour
 import app.accrescent.server.adapters.driving.api.vertx.ApiVerticle
 import app.accrescent.server.domain.IdGenerator
 import app.accrescent.server.domain.api.authn.AuthenticationApiImpl
+import app.accrescent.server.domain.api.console2.ConsoleApiImpl
 import arrow.core.getOrElse
 import io.netty.util.NetUtil
 import io.vertx.core.DeploymentOptions
@@ -43,12 +44,14 @@ fun main() {
 
     // Set up the domain APIs
     val randomSource = SecureRandomSource()
+    val timestampSource = SystemTimestampSource()
     val authenticationApi = AuthenticationApiImpl(
         dataStore = dataStore,
         idGenerator = IdGenerator(randomSource),
         sessionLifetime = config.authn.session.lifetime,
-        timestampSource = SystemTimestampSource(),
+        timestampSource = timestampSource,
     )
+    val consoleApi = ConsoleApiImpl(dataStore, timestampSource)
 
     // Start the HTTP server
     val deployment = vertx.deployVerticle(
@@ -57,6 +60,7 @@ fun main() {
                 serverConfig = config.server,
                 authnConfig = config.authn,
                 authenticationApi = authenticationApi,
+                consoleApi = consoleApi,
                 randomSource = randomSource,
             )
         },

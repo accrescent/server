@@ -251,6 +251,92 @@ abstract class DataStoreConformanceTest {
     }
 
     @Test
+    suspend fun `findOrgApiViewByOwnerUserId returns API view of organization owned by given user`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            val organization = dataStore.runInTransaction { tx ->
+                tx.findOrgApiViewByOwnerUserId("user1").bind()
+            }
+                .unwrap2()
+
+            assertEquals(
+                Some(OrgApiView(id = "org1", publishedAppCount = 0u, activeAppDraftCount = 0u)),
+                organization,
+            )
+        }
+    }
+
+    @Test
+    suspend fun `findOrgApiViewByOwnerUserId returns None for non-existent user`() {
+        withMigratedDataStore { dataStore ->
+            val organization = dataStore.runInTransaction { tx ->
+                tx.findOrgApiViewByOwnerUserId("user2").bind()
+            }
+                .unwrap2()
+
+            assertEquals(None, organization)
+        }
+    }
+
+    @Test
+    suspend fun `findUserIdByActiveSessionIdHash returns ID of user associated with given session ID hash`() {
+        withMigratedDataStore { dataStore ->
+            val idHash = Sha256Hash.hash("session1".toByteArray())
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createSession(idHash, "user1", UNIX_EPOCH, UNIX_EPOCH.plusDays(1)).bind()
+            }
+                .unwrap2()
+
+            val userId = dataStore.runInTransaction { tx ->
+                tx.findUserIdByActiveSessionIdHash(idHash, UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            assertEquals(Some("user1"), userId)
+        }
+    }
+
+    @Test
+    suspend fun `findUserIdByActiveSessionIdHash returns None for non-existent session`() {
+        withMigratedDataStore { dataStore ->
+            val userId = dataStore.runInTransaction { tx ->
+                tx.findUserIdByActiveSessionIdHash(
+                    Sha256Hash.hash("session1".toByteArray()),
+                    UNIX_EPOCH,
+                )
+                    .bind()
+            }
+                .unwrap2()
+
+            assertEquals(None, userId)
+        }
+    }
+
+    @Test
+    suspend fun `findUserIdByActiveSessionIdHash returns None for expired session`() {
+        withMigratedDataStore { dataStore ->
+            val idHash = Sha256Hash.hash("session1".toByteArray())
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createSession(idHash, "user1", UNIX_EPOCH, UNIX_EPOCH.plusDays(1)).bind()
+            }
+                .unwrap2()
+
+            val userId = dataStore.runInTransaction { tx ->
+                tx.findUserIdByActiveSessionIdHash(idHash, UNIX_EPOCH.plusDays(1)).bind()
+            }
+                .unwrap2()
+
+            assertEquals(None, userId)
+        }
+    }
+
+    @Test
     suspend fun `findUserIdByExternalUserId returns ID of user associated with given external user ID`() {
         withMigratedDataStore { dataStore ->
             dataStore.runInTransaction { tx ->

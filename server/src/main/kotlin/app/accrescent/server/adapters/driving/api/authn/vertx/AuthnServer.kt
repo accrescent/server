@@ -52,7 +52,11 @@ const val AUTHN_PATH_PREFIX = "/auth/"
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#cookie_prefixes
 // for more information on what this accomplishes.
 private const val COOKIE_NAME_PREFIX = "__Host-Http-"
-private const val SESSION_COOKIE_NAME = "${COOKIE_NAME_PREFIX}session"
+
+/**
+ * The name of the cookie [AuthnServer] stores authenticated session IDs in.
+ */
+const val SESSION_COOKIE_NAME = "${COOKIE_NAME_PREFIX}session"
 private const val POST_LOGIN_REDIRECT_PATH = "/"
 private const val LOGIN_CANCELED_REDIRECT_PATH = "/"
 

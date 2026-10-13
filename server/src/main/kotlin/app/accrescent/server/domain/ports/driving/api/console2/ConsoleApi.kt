@@ -1,0 +1,21 @@
+// SPDX-FileCopyrightText: © 2026 Logan Magee
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package app.accrescent.server.domain.ports.driving.api.console2
+
+import arrow.core.Either
+
+/**
+ * The Accrescent console API.
+ */
+interface ConsoleApi {
+    /**
+     * Gets the organization of the currently authenticated user.
+     *
+     * @param context the context for this call.
+     */
+    suspend fun getMyOrganization(
+        context: CallContext,
+    ): Either<GetMyOrganizationError, GetMyOrganizationResponse>
+}

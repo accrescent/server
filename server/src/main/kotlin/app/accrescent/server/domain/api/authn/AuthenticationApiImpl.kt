@@ -80,6 +80,7 @@ class AuthenticationApiImpl(
 private fun toServerError(error: DataStoreError): CreateSessionError {
     val createSessionError = when (error) {
         is DataStoreError.ConsistencyViolation,
+        is DataStoreError.EntityNotFound,
         is DataStoreError.IllegalState,
         is DataStoreError.Unknown -> CreateSessionError.InternalServerError()
 

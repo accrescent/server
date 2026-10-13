@@ -10,6 +10,7 @@ import app.accrescent.server.domain.crypto.Sha256Hash
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option
+import arrow.core.flatMap
 import arrow.core.raise.Raise
 import java.time.OffsetDateTime
 
@@ -23,6 +24,13 @@ sealed class DataStoreError : Error() {
      */
     class ConsistencyViolation : DataStoreError() {
         override val message = "consistency violation"
+    }
+
+    /**
+     * An entity which was expected to exist was not found.
+     */
+    class EntityNotFound : DataStoreError() {
+        override val message = "entity not found"
     }
 
     /**
@@ -100,7 +108,7 @@ interface DataStore {
      *
      * Provides access to all data access methods which participate in a data store transaction.
      */
-    interface Transaction {
+    abstract class Transaction {
         /**
          * Creates an organization with its owner.
          *
@@ -111,7 +119,7 @@ interface DataStore {
          * @return [DataStoreError.ConsistencyViolation] if an organization with the same ID, a user
          * with the same ID, or a user with the same external user ID already exists.
          */
-        suspend fun createOrgWithOwner(
+        abstract suspend fun createOrgWithOwner(
             organizationId: String,
             userId: String,
             externalUserId: ExternalUserId,
@@ -129,12 +137,36 @@ interface DataStore {
          * @return [DataStoreError.ConsistencyViolation] if a session with the same ID hash already
          * exists, the user does not exist, or [expireTime] is not later than [createTime].
          */
-        suspend fun createSession(
+        abstract suspend fun createSession(
             idHash: Sha256Hash,
             userId: String,
             createTime: OffsetDateTime,
             expireTime: OffsetDateTime,
         ): DataStoreResult<Unit>
+
+        /**
+         * Finds the API view of the organization a given user owns.
+         *
+         * @param userId the ID of the user to find the organization of.
+         * @return the API view of the organization the user owns, or [None] if no user with the
+         * given ID exists.
+         */
+        abstract suspend fun findOrgApiViewByOwnerUserId(
+            userId: String,
+        ): DataStoreResult<Option<OrgApiView>>
+
+        /**
+         * Finds the ID of a user a session belongs to if the session is active.
+         *
+         * @param sessionIdHash the SHA-256 hash of the session ID.
+         * @param currentTime the current timestamp to be used for checking session expiration.
+         * @return the ID of the user the session belongs to, or [None] if no such session exists or
+         * the session is expired.
+         */
+        abstract suspend fun findUserIdByActiveSessionIdHash(
+            sessionIdHash: Sha256Hash,
+            currentTime: OffsetDateTime,
+        ): DataStoreResult<Option<String>>
 
         /**
          * Finds the ID of a user with a given external user identity.
@@ -143,8 +175,20 @@ interface DataStore {
          * @return the ID of the user with the given external user identity, or [None] if none
          * exists.
          */
-        suspend fun findUserIdByExternalUserId(
+        abstract suspend fun findUserIdByExternalUserId(
             externalUserId: ExternalUserId,
         ): DataStoreResult<Option<String>>
+
+        /**
+         * Finds the API view of the organization a given user owns.
+         *
+         * @param userId the ID of the user to find the organization of.
+         * @return the API view of the organization the user owns, or
+         * [DataStoreError.EntityNotFound] if no user with the given ID exists.
+         */
+        suspend fun requireOrgApiViewByOwnerUserId(userId: String): DataStoreResult<OrgApiView> {
+            return findOrgApiViewByOwnerUserId(userId)
+                .flatMap { it.toEither { DataStoreError.EntityNotFound() } }
+        }
     }
 }

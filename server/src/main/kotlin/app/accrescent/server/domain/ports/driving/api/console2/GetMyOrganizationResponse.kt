@@ -7,6 +7,6 @@ package app.accrescent.server.domain.ports.driving.api.console2
 /**
  * Response to getting the authenticated user's organization.
  *
- * @property organization the authenticated user's organization.
+ * @property organizationId the authenticated user's organization ID.
  */
-data class GetMyOrganizationResponse(val organization: Organization)
+data class GetMyOrganizationResponse(val organizationId: String)

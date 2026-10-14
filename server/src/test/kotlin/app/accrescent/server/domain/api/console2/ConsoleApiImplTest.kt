@@ -18,7 +18,6 @@ import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
-import app.accrescent.server.domain.ports.driving.api.console2.Organization
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
 import arrow.core.None
 import arrow.core.Some
@@ -76,15 +75,7 @@ class ConsoleApiImplTest {
             val response = consoleApi.getMyOrganization(context)
 
             assertEquals(
-                GetMyOrganizationResponse(
-                    Organization(
-                        id = "org_1uMy9o9BqyoxomLjIEbctU",
-                        publishedAppLimit = 1u,
-                        publishedAppCount = 0u,
-                        activeAppDraftLimit = 3u,
-                        activeAppDraftCount = 0u,
-                    ),
-                ),
+                GetMyOrganizationResponse("org_1uMy9o9BqyoxomLjIEbctU"),
                 response.unwrap(),
             )
         }

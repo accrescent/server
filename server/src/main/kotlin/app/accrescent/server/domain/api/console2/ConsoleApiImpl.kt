@@ -11,12 +11,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
-import app.accrescent.server.domain.ports.driving.api.console2.Organization
 import arrow.core.Either
 import arrow.core.raise.either
-
-private const val ACTIVE_APP_DRAFT_LIMIT = 3u
-private const val PUBLISHED_APP_LIMIT = 1u
 
 /**
  * Primary implementation of [ConsoleApi].
@@ -32,23 +28,15 @@ class ConsoleApiImpl(
         context: CallContext,
     ): Either<GetMyOrganizationError, GetMyOrganizationResponse> = either {
         val currentTime = timestampSource.now()
-        val organization = dataStore.runInTransaction { tx ->
+        val organizationId = dataStore.runInTransaction { tx ->
             val userId = authenticateCaller(tx, context.sessionId, currentTime)
 
             // The organization is guaranteed to exist since the user is authenticated
-            tx.requireOrgApiViewByOwnerUserId(userId).bindMapLeft(::toServerError)
+            tx.requireOrgIdByOwnerUserId(userId).bindMapLeft(::toServerError)
         }
             .bindMapLeft(::toServerError)
             .bind()
 
-        GetMyOrganizationResponse(
-            Organization(
-                id = organization.id,
-                publishedAppLimit = PUBLISHED_APP_LIMIT,
-                publishedAppCount = organization.publishedAppCount,
-                activeAppDraftLimit = ACTIVE_APP_DRAFT_LIMIT,
-                activeAppDraftCount = organization.activeAppDraftCount,
-            ),
-        )
+        GetMyOrganizationResponse(organizationId)
     }
 }

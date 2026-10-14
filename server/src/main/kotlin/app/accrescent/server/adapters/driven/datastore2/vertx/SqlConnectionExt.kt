@@ -37,10 +37,38 @@ suspend fun SqlConnection.executeOptionalQuery(
         raise.raise(mapError(it))
     }
     if (rows.size() != 0 && rows.size() != 1) {
-        raise.raise(DataStoreError.IllegalState().causedBy(UnexpectedResultSize(rows.size())))
+        raise.raise(
+            DataStoreError.IllegalState().causedBy(UnexpectedResultSize("0 or 1", rows.size()))
+        )
     }
 
     return rows.firstOrNone()
+}
+
+/**
+ * Executes a query which should return exactly one row.
+ *
+ * Raises [DataStoreError.IllegalState] if the query returns any other number of rows.
+ *
+ * @param sql the SQL query to execute.
+ * @param params the query's parameters.
+ * @param mapError converter from exceptions thrown during execution to [DataStoreError].
+ * @return the row returned by the query.
+ */
+context(raise: Raise<DataStoreError>)
+suspend fun SqlConnection.executeSingleQuery(
+    sql: String,
+    params: Tuple,
+    mapError: (Throwable) -> DataStoreError,
+): Row {
+    val rows = catch({ preparedQuery(sql).execute(params).coAwait() }) {
+        raise.raise(mapError(it))
+    }
+    if (rows.size() != 1) {
+        raise.raise(DataStoreError.IllegalState().causedBy(UnexpectedResultSize("1", rows.size())))
+    }
+
+    return rows.first()
 }
 
 /**
@@ -77,10 +105,11 @@ private class UnexpectedRowCount(expected: Int, actual: Int) : Error() {
 }
 
 /**
- * A query which should return at most one row reported returning a different number of rows.
+ * A query reported returning a different number of rows than expected.
  *
+ * @param expected a description of the number of rows the query was expected to return.
  * @param actual the number of rows the query reported returning.
  */
-private class UnexpectedResultSize(actual: Int) : Error() {
-    override val message = "expected query to return 0 or 1 rows, but it returned $actual"
+private class UnexpectedResultSize(expected: String, actual: Int) : Error() {
+    override val message = "expected query to return $expected rows, but it returned $actual"
 }

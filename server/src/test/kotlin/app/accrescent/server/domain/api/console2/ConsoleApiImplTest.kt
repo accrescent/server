@@ -4,10 +4,12 @@
 
 package app.accrescent.server.domain.api.console2
 
+import app.accrescent.server.UNIX_EPOCH
 import app.accrescent.server.adapters.driven.datastore2.vertx.MemoryDataStore
 import app.accrescent.server.adapters.driven.randomsource.DeterministicRandomSource
 import app.accrescent.server.adapters.driven.timestampsource.FixedTimestampSource
 import app.accrescent.server.core.unwrap
+import app.accrescent.server.core.unwrap2
 import app.accrescent.server.core.unwrapErr
 import app.accrescent.server.domain.IdGenerator
 import app.accrescent.server.domain.api.authn.AuthenticationApiImpl
@@ -18,6 +20,10 @@ import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
+import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
+import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
+import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
+import app.accrescent.server.domain.ports.driving.api.console2.Organization
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
 import arrow.core.None
 import arrow.core.Some
@@ -76,6 +82,48 @@ class ConsoleApiImplTest {
 
             assertEquals(
                 GetMyOrganizationResponse("org_1uMy9o9BqyoxomLjIEbctU"),
+                response.unwrap(),
+            )
+        }
+    }
+
+    @Test
+    suspend fun `getOrganization returns InsufficientPermission for unauthorized request`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org2", "user2", ExternalUserId.Github(2), UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.getOrganization(context, GetOrganizationRequest("org2"))
+
+            assertInstanceOf<InsufficientPermissionError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `getOrganization returns organization for authorized request`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.getOrganization(
+                context,
+                GetOrganizationRequest("org_1uMy9o9BqyoxomLjIEbctU"),
+            )
+
+            assertEquals(
+                GetOrganizationResponse(
+                    Organization(
+                        id = "org_1uMy9o9BqyoxomLjIEbctU",
+                        publishedAppLimit = 1u,
+                        publishedAppCount = 0u,
+                        activeAppDraftLimit = 3u,
+                        activeAppDraftCount = 0u,
+                    ),
+                ),
                 response.unwrap(),
             )
         }

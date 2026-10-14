@@ -145,6 +145,17 @@ interface DataStore {
         ): DataStoreResult<Unit>
 
         /**
+         * Finds the API view of an organization.
+         *
+         * @param organizationId the ID of the organization to find.
+         * @return the API view of the organization, or [None] if no organization with the given ID
+         * exists.
+         */
+        abstract suspend fun findOrgApiViewById(
+            organizationId: String,
+        ): DataStoreResult<Option<OrgApiView>>
+
+        /**
          * Finds the ID of the organization a given user owns.
          *
          * @param userId the ID of the user to find the organization of.
@@ -178,6 +189,28 @@ interface DataStore {
         abstract suspend fun findUserIdByExternalUserId(
             externalUserId: ExternalUserId,
         ): DataStoreResult<Option<String>>
+
+        /**
+         * Checks whether a subject has a given permission on a given resource.
+         *
+         * Authorization is derived from the relationships between application resources.
+         *
+         * @param request the permission to check.
+         * @return whether the permission is granted.
+         */
+        abstract suspend fun hasPermission(request: HasPermissionRequest): DataStoreResult<Boolean>
+
+        /**
+         * Finds the API view of an organization.
+         *
+         * @param organizationId the ID of the organization to find.
+         * @return the API view of the organization, or [DataStoreError.EntityNotFound] if no
+         * organization with the given ID exists.
+         */
+        suspend fun requireOrgApiViewById(organizationId: String): DataStoreResult<OrgApiView> {
+            return findOrgApiViewById(organizationId)
+                .flatMap { it.toEither { DataStoreError.EntityNotFound() } }
+        }
 
         /**
          * Finds the ID of the organization a given user owns.

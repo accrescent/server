@@ -7,9 +7,11 @@ package app.accrescent.server.adapters.driving.api.console.grpc
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import arrow.core.getOrElse
 import build.buf.gen.accrescent.console.v1.GetMyOrganizationRequest
+import build.buf.gen.accrescent.console.v1.GetOrganizationRequest
 import build.buf.gen.accrescent.console.v1.OrganizationServiceGrpcKt
 import kotlin.coroutines.CoroutineContext
 import build.buf.gen.accrescent.console.v1.GetMyOrganizationResponse as GetMyOrganizationResponseProto
+import build.buf.gen.accrescent.console.v1.GetOrganizationResponse as GetOrganizationResponseProto
 
 /**
  * gRPC implementation of the console API's `OrganizationService`.
@@ -23,6 +25,17 @@ class OrganizationServiceImpl(
     context: CoroutineContext,
     private val consoleApi: ConsoleApi,
 ) : OrganizationServiceGrpcKt.OrganizationServiceCoroutineImplBase(context) {
+    override suspend fun getOrganization(
+        request: GetOrganizationRequest,
+    ): GetOrganizationResponseProto {
+        val context = CallContextInterceptor.CALL_CONTEXT_KEY.get()
+
+        return consoleApi.getOrganization(context, toDomain(request))
+            .mapLeft(::toStatus)
+            .getOrElse { throw it.asRuntimeException() }
+            .let(::toProto)
+    }
+
     override suspend fun getMyOrganization(
         request: GetMyOrganizationRequest,
     ): GetMyOrganizationResponseProto {

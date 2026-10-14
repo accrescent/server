@@ -18,4 +18,15 @@ interface ConsoleApi {
     suspend fun getMyOrganization(
         context: CallContext,
     ): Either<GetMyOrganizationError, GetMyOrganizationResponse>
+
+    /**
+     * Gets an organization.
+     *
+     * @param context the context for this call.
+     * @param request the request parameters.
+     */
+    suspend fun getOrganization(
+        context: CallContext,
+        request: GetOrganizationRequest,
+    ): Either<GetOrganizationError, GetOrganizationResponse>
 }

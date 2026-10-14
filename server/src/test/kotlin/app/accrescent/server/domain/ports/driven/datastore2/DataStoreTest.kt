@@ -14,6 +14,19 @@ import org.junit.jupiter.api.assertInstanceOf
 
 class DataStoreTest {
     @Test
+    suspend fun `requireOrgApiViewById returns EntityNotFound for non-existent organization`() {
+        withMigratedDataStore { dataStore ->
+            val error = dataStore.runInTransaction { tx ->
+                tx.requireOrgApiViewById("org1").bind()
+            }
+                .unwrap()
+                .unwrapErr()
+
+            assertInstanceOf<DataStoreError.EntityNotFound>(error)
+        }
+    }
+
+    @Test
     suspend fun `requireOrgIdByOwnerUserId returns EntityNotFound for non-existent user`() {
         withMigratedDataStore { dataStore ->
             val error = dataStore.runInTransaction { tx ->

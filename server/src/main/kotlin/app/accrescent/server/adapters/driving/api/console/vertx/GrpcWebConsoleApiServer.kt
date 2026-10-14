@@ -9,6 +9,7 @@ import app.accrescent.server.adapters.driving.api.console.grpc.AppEditServiceImp
 import app.accrescent.server.adapters.driving.api.console.grpc.AppServiceImpl
 import app.accrescent.server.adapters.driving.api.console.grpc.CallContextInterceptor
 import app.accrescent.server.adapters.driving.api.console.grpc.OrganizationServiceImpl
+import app.accrescent.server.adapters.driving.api.console.grpc.RequestValidationInterceptor
 import app.accrescent.server.adapters.driving.api.console.grpc.ReviewServiceImpl
 import app.accrescent.server.adapters.driving.api.console.grpc.UserServiceImpl
 import app.accrescent.server.adapters.driving.api.vertx.grpcServerOptions
@@ -80,12 +81,14 @@ private fun createServer(
 }
 
 /**
- * Adds a service to this server with [CallContextInterceptor] applied.
+ * Adds a service to this server with [CallContextInterceptor] and [RequestValidationInterceptor]
+ * applied.
  *
  * @param service the service to add.
  * @return this server.
  */
 private fun GrpcServer.addInterceptedService(service: BindableService): GrpcServer {
-    val interceptedService = ServerInterceptors.intercept(service, CallContextInterceptor())
+    val interceptedService = ServerInterceptors
+        .intercept(service, RequestValidationInterceptor(), CallContextInterceptor())
     return addService(GrpcIoServiceBridge.bridge(interceptedService))
 }

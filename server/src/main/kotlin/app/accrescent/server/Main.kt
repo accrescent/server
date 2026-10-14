@@ -7,6 +7,7 @@ package app.accrescent.server
 import app.accrescent.server.adapters.driven.cfgloader.SmallRyeConfigLoader
 import app.accrescent.server.adapters.driven.datastore2.vertx.MemoryDataStore
 import app.accrescent.server.adapters.driven.randomsource.SecureRandomSource
+import app.accrescent.server.adapters.driven.secretvault.SecretManagerSecretVault
 import app.accrescent.server.adapters.driven.timestampsource.SystemTimestampSource
 import app.accrescent.server.adapters.driving.api.vertx.ApiVerticle
 import app.accrescent.server.domain.IdGenerator
@@ -23,16 +24,19 @@ import java.net.InetSocketAddress
 import java.util.function.Supplier
 import kotlin.system.exitProcess
 
+private const val SECRET_MANAGER_VAULT_NAME = "secret-manager"
 private const val VERSION = "0.16.0"
 
 fun main() {
     val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
 
     // Load configuration
-    val config = SmallRyeConfigLoader().loadConfig().getOrElse {
-        logger.error("Failed to load configuration: {}", it)
-        exitProcess(1)
-    }
+    val config = SecretManagerSecretVault()
+        .use { SmallRyeConfigLoader(mapOf(SECRET_MANAGER_VAULT_NAME to it)).loadConfig() }
+        .getOrElse {
+            logger.error("Failed to load configuration: {}", it)
+            exitProcess(1)
+        }
 
     // Set up the data store
     val vertx = Vertx.vertx()

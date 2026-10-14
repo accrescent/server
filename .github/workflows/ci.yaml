@@ -47,3 +47,42 @@ jobs:
         with:
           name: test-output
           path: parcelo/build/reports/tests/
+
+  integration-test:
+    permissions:
+      contents: read
+      id-token: write
+    # Skip if we can't authenticate to Google Cloud to prevent spurious job failures. This check
+    # isn't what prevents other repositories from accessing GCP credentials; that check is done by
+    # GitHub, which denies OIDC token access to pull_request jobs (see
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#how-permissions-are-calculated-for-a-workflow-job),
+    # and Google Cloud, which rejects credentials that don't match our configured attribute
+    # conditions (see
+    # https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines#conditions).
+    if: >-
+      github.repository == 'accrescent/server' &&
+      (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == 'accrescent/server')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: ${{ vars.GOOGLE_CLOUD_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GOOGLE_CLOUD_WORKLOAD_IDENTITY_PROVIDER }}
+      # Use intermediate environment variables for a little extra security. See
+      # https://docs.github.com/en/actions/reference/security/secure-use#use-an-intermediate-environment-variable.
+      - run: >
+          ./gradlew integrationTest
+          -PintegrationTest.secretManager.secretVersion="$SECRET_MANAGER_TEST_SECRET_VERSION"
+        env:
+          SECRET_MANAGER_TEST_SECRET_VERSION: ${{ vars.SECRET_MANAGER_TEST_SECRET_VERSION }}
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-test-output
+          path: server/build/reports/tests/integrationTest/

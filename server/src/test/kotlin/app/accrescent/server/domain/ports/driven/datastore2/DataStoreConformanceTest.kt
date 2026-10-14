@@ -12,10 +12,16 @@ import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.crypto.Sha256Hash
 import arrow.core.None
 import arrow.core.Some
+import arrow.core.flatten
 import arrow.core.raise.either
 import arrow.core.right
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.assertThrows
@@ -37,6 +43,15 @@ abstract class DataStoreConformanceTest {
      * @return the return value of [block].
      */
     protected abstract suspend fun <T> withDataStore(block: suspend (DataStore) -> T): T
+
+    /**
+     * Whether the data store under test can run multiple transactions concurrently.
+     *
+     * Tests which require concurrent transactions to interleave are skipped when this is `false`
+     * since waiting for such an interleaving would deadlock a data store which runs transactions
+     * one at a time.
+     */
+    protected open val runsTransactionsConcurrently = true
 
     /**
      * Convenience method for running a lambda with a new, migrated [DataStore] instance.
@@ -142,6 +157,61 @@ abstract class DataStoreConformanceTest {
                 .unwrapErr()
 
             assertInstanceOf<DataStoreError.ConsistencyViolation>(error)
+        }
+    }
+
+    @Test
+    suspend fun `runInTransaction prevents write skew`() {
+        assumeTrue(runsTransactionsConcurrently, "data store runs transactions one at a time")
+
+        withMigratedDataStore { dataStore ->
+            val readsDone = List(2) { CompletableDeferred<Unit>() }
+
+            // Each transaction creates its user only if the other transaction's user doesn't exist,
+            // so no serial execution of the two transactions can create both users. Snapshot
+            // isolation, however, allows creating both users since both reads precede both writes.
+            suspend fun createUserIfOtherAbsent(n: Int, other: Int) = try {
+                dataStore.runInTransaction { tx ->
+                    val otherUserId =
+                        tx.findUserIdByExternalUserId(ExternalUserId.Github(other.toLong())).bind()
+
+                    // Wait for the other transaction's read so that both reads precede both writes
+                    readsDone[n - 1].complete(Unit)
+                    readsDone.awaitAll()
+
+                    if (otherUserId.isNone()) {
+                        tx.createOrgWithOwner(
+                            "org$n",
+                            "user$n",
+                            ExternalUserId.Github(n.toLong()),
+                            UNIX_EPOCH,
+                        )
+                            .bind()
+                    }
+                }
+            } finally {
+                // Don't leave the other transaction waiting forever if this one failed to read
+                readsDone[n - 1].complete(Unit)
+            }
+
+            val results = coroutineScope {
+                listOf(
+                    async { createUserIfOtherAbsent(1, 2) },
+                    async { createUserIfOtherAbsent(2, 1) },
+                )
+                    .awaitAll()
+            }
+
+            // The data store may abort a transaction with a serialization error, but not for any
+            // other reason
+            results
+                .mapNotNull { it.flatten().leftOrNull() }
+                .forEach { assertInstanceOf<DataStoreError.SerializationFailure>(it) }
+            val userIds = dataStore.runInTransaction { tx ->
+                (1L..2L).map { tx.findUserIdByExternalUserId(ExternalUserId.Github(it)).bind() }
+            }
+                .unwrap2()
+            assertTrue(userIds.count { it.isSome() } <= 1, "both users were created: $userIds")
         }
     }
 

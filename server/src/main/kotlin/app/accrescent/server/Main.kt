@@ -6,6 +6,7 @@ package app.accrescent.server
 
 import app.accrescent.server.adapters.driven.cfgloader.SmallRyeConfigLoader
 import app.accrescent.server.adapters.driven.datastore2.vertx.MemoryDataStore
+import app.accrescent.server.adapters.driven.datastore2.vertx.PostgresqlDataStore
 import app.accrescent.server.adapters.driven.randomsource.SecureRandomSource
 import app.accrescent.server.adapters.driven.secretvault.SecretManagerSecretVault
 import app.accrescent.server.adapters.driven.timestampsource.SystemTimestampSource
@@ -13,6 +14,7 @@ import app.accrescent.server.adapters.driving.api.vertx.ApiVerticle
 import app.accrescent.server.domain.IdGenerator
 import app.accrescent.server.domain.api.authn.AuthenticationApiImpl
 import app.accrescent.server.domain.api.console2.ConsoleApiImpl
+import app.accrescent.server.domain.config.DataStoreConfig
 import arrow.core.getOrElse
 import io.netty.util.NetUtil
 import io.vertx.core.DeploymentOptions
@@ -40,7 +42,10 @@ fun main() {
 
     // Set up the data store
     val vertx = Vertx.vertx()
-    val dataStore = MemoryDataStore(vertx)
+    val dataStore = when (val dataStoreConfig = config.dataStore) {
+        DataStoreConfig.Memory -> MemoryDataStore(vertx)
+        is DataStoreConfig.Postgresql -> PostgresqlDataStore(vertx, dataStoreConfig)
+    }
     dataStore.migrateToHead().getOrElse {
         logger.error("Failed migrating database to latest schema: {}", it)
         exitProcess(1)

@@ -18,20 +18,16 @@ import arrow.core.None
 import arrow.core.Option
 import arrow.core.left
 import arrow.core.raise.Raise
-import arrow.core.raise.catch
 import arrow.core.raise.either
 import arrow.core.right
 import io.vertx.core.Vertx
 import io.vertx.jdbcclient.JDBCConnectOptions
 import io.vertx.jdbcclient.JDBCPool
-import io.vertx.kotlin.coroutines.coAwait
 import io.vertx.sqlclient.Pool
 import io.vertx.sqlclient.PoolOptions
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlConnection
 import io.vertx.sqlclient.Tuple
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
 import org.h2.api.ErrorCode
@@ -83,23 +79,9 @@ class MemoryDataStore(vertx: Vertx) : DataStore {
 
     override suspend fun <T, E> runInTransaction(
         block: suspend Raise<E>.(DataStore.Transaction) -> T,
-    ): DataStoreResult<Either<E, T>> = either {
-        val connection = catch({ pool.awaitConnection() }) { raise(it.toDataStoreError()) }
-        try {
-            val transaction = catch({ connection.begin().coAwait() }) {
-                raise(it.toDataStoreError())
-            }
-            val result = either { block(MemoryTransaction(connection)) }
-            if (result.isRight()) {
-                // Don't commit for a caller that was canceled while block ran
-                currentCoroutineContext().ensureActive()
-                catch({ transaction.commit().coAwait() }) { raise(it.toDataStoreError()) }
-            }
-            result
-        } finally {
-            // Closing the connection rolls back the transaction if it wasn't committed. There's
-            // nothing to do if closing fails, so don't wait for it.
-            connection.close()
+    ): DataStoreResult<Either<E, T>> {
+        return pool.runInTransaction(Throwable::toDataStoreError) { connection ->
+            block(MemoryTransaction(connection))
         }
     }
 

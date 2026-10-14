@@ -14,10 +14,12 @@ import java.net.InetAddress
  *
  * @property server the HTTP server configuration.
  * @property authn the user authentication configuration.
+ * @property dataStore the data store configuration.
  */
 data class ApplicationConfig(
     val server: ServerConfig,
     val authn: AuthnConfig,
+    val dataStore: DataStoreConfig,
 )
 
 /**
@@ -61,3 +63,33 @@ data class GithubAuthnConfig(
  * @property lifetime how long a user session remains valid after login.
  */
 data class SessionConfig(val lifetime: SessionLifetime)
+
+/**
+ * Data store configuration.
+ */
+sealed class DataStoreConfig {
+    /**
+     * Configuration for a data store held entirely in memory.
+     *
+     * All data is lost when the server exits, so this backend is intended only for development and
+     * testing.
+     */
+    data object Memory : DataStoreConfig()
+
+    /**
+     * Configuration for a data store backed by a PostgreSQL database.
+     *
+     * @property host the host name or IP address of the PostgreSQL server.
+     * @property port the port of the PostgreSQL server.
+     * @property database the name of the database to connect to.
+     * @property user the name of the user to authenticate with.
+     * @property password the password of the user to authenticate with.
+     */
+    data class Postgresql(
+        val host: NonEmptyString,
+        val port: TcpPort,
+        val database: NonEmptyString,
+        val user: NonEmptyString,
+        val password: NonEmptyString,
+    ) : DataStoreConfig()
+}

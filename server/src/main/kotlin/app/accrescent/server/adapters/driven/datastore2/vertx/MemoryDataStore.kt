@@ -11,7 +11,6 @@ import app.accrescent.server.domain.crypto.Sha256Hash
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreError
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreResult
-import app.accrescent.server.domain.ports.driven.datastore2.OrgApiView
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option
@@ -165,20 +164,14 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
         )
     }
 
-    override suspend fun findOrgApiViewByOwnerUserId(
+    override suspend fun findOrgIdByOwnerUserId(
         userId: String,
-    ): DataStoreResult<Option<OrgApiView>> = either {
+    ): DataStoreResult<Option<String>> = either {
         connection.executeOptionalQuery(
             "SELECT id FROM organizations WHERE owner_user_id = ?",
             Tuple.of(userId),
         )
-            .map {
-                OrgApiView(
-                    id = it.requireValue<String>(0).bind(),
-                    publishedAppCount = 0u,
-                    activeAppDraftCount = 0u,
-                )
-            }
+            .map { it.requireValue<String>(0).bind() }
     }
 
     override suspend fun findUserIdByActiveSessionIdHash(

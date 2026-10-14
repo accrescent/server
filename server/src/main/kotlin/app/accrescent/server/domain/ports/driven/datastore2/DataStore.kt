@@ -145,15 +145,15 @@ interface DataStore {
         ): DataStoreResult<Unit>
 
         /**
-         * Finds the API view of the organization a given user owns.
+         * Finds the ID of the organization a given user owns.
          *
          * @param userId the ID of the user to find the organization of.
-         * @return the API view of the organization the user owns, or [None] if no user with the
-         * given ID exists.
+         * @return the ID of the organization the user owns, or [None] if no user with the given ID
+         * exists.
          */
-        abstract suspend fun findOrgApiViewByOwnerUserId(
+        abstract suspend fun findOrgIdByOwnerUserId(
             userId: String,
-        ): DataStoreResult<Option<OrgApiView>>
+        ): DataStoreResult<Option<String>>
 
         /**
          * Finds the ID of a user a session belongs to if the session is active.
@@ -180,14 +180,14 @@ interface DataStore {
         ): DataStoreResult<Option<String>>
 
         /**
-         * Finds the API view of the organization a given user owns.
+         * Finds the ID of the organization a given user owns.
          *
          * @param userId the ID of the user to find the organization of.
-         * @return the API view of the organization the user owns, or
-         * [DataStoreError.EntityNotFound] if no user with the given ID exists.
+         * @return the ID of the organization the user owns, or [DataStoreError.EntityNotFound]
+         * if no user with the given ID exists.
          */
-        suspend fun requireOrgApiViewByOwnerUserId(userId: String): DataStoreResult<OrgApiView> {
-            return findOrgApiViewByOwnerUserId(userId)
+        suspend fun requireOrgIdByOwnerUserId(userId: String): DataStoreResult<String> {
+            return findOrgIdByOwnerUserId(userId)
                 .flatMap { it.toEither { DataStoreError.EntityNotFound() } }
         }
     }

@@ -251,34 +251,31 @@ abstract class DataStoreConformanceTest {
     }
 
     @Test
-    suspend fun `findOrgApiViewByOwnerUserId returns API view of organization owned by given user`() {
+    suspend fun `findOrgIdByOwnerUserId returns ID of organization owned by given user`() {
         withMigratedDataStore { dataStore ->
             dataStore.runInTransaction { tx ->
                 tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
             }
                 .unwrap2()
 
-            val organization = dataStore.runInTransaction { tx ->
-                tx.findOrgApiViewByOwnerUserId("user1").bind()
+            val organizationId = dataStore.runInTransaction { tx ->
+                tx.findOrgIdByOwnerUserId("user1").bind()
             }
                 .unwrap2()
 
-            assertEquals(
-                Some(OrgApiView(id = "org1", publishedAppCount = 0u, activeAppDraftCount = 0u)),
-                organization,
-            )
+            assertEquals(Some("org1"), organizationId)
         }
     }
 
     @Test
-    suspend fun `findOrgApiViewByOwnerUserId returns None for non-existent user`() {
+    suspend fun `findOrgIdByOwnerUserId returns None for non-existent user`() {
         withMigratedDataStore { dataStore ->
-            val organization = dataStore.runInTransaction { tx ->
-                tx.findOrgApiViewByOwnerUserId("user2").bind()
+            val organizationId = dataStore.runInTransaction { tx ->
+                tx.findOrgIdByOwnerUserId("user2").bind()
             }
                 .unwrap2()
 
-            assertEquals(None, organization)
+            assertEquals(None, organizationId)
         }
     }
 

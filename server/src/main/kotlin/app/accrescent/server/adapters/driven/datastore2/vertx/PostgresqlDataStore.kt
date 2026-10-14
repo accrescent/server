@@ -155,7 +155,7 @@ private class PostgresqlTransaction(
             .map {
                 // Apps and app drafts aren't stored yet, so organizations never have any
                 OrgApiView(
-                    id = it.requireValue<String>(0).bind(),
+                    id = it.requireValue<String>(0),
                     publishedAppCount = 0u,
                     activeAppDraftCount = 0u,
                 )
@@ -169,7 +169,7 @@ private class PostgresqlTransaction(
             "SELECT id FROM organizations WHERE owner_user_id = ?",
             Tuple.of(userId),
         )
-            .map { it.requireValue<String>(0).bind() }
+            .map { it.requireValue<String>(0) }
     }
 
     override suspend fun findUserIdByActiveSessionIdHash(
@@ -180,7 +180,7 @@ private class PostgresqlTransaction(
             "SELECT user_id FROM sessions WHERE id_hash = ? AND expire_time > ?",
             Tuple.of(sessionIdHash.digest().copyToByteArray(), currentTime),
         )
-            .map { it.requireValue<String>(0).bind() }
+            .map { it.requireValue<String>(0) }
     }
 
     override suspend fun findUserIdByExternalUserId(
@@ -194,7 +194,7 @@ private class PostgresqlTransaction(
             "SELECT id FROM users WHERE github_user_id = ?",
             Tuple.of(githubUserId),
         )
-            .map { it.requireValue<String>(0).bind() }
+            .map { it.requireValue<String>(0) }
     }
 
     override suspend fun hasPermission(
@@ -208,7 +208,6 @@ private class PostgresqlTransaction(
         connection
             .executeSingleQuery(sql, Tuple.of(request.resourceId, request.subjectId))
             .requireValue<Boolean>(0)
-            .bind()
     }
 }
 

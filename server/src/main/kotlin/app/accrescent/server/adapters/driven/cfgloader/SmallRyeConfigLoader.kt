@@ -4,8 +4,10 @@
 
 package app.accrescent.server.adapters.driven.cfgloader
 
+import app.accrescent.server.core.Error
 import app.accrescent.server.core.NonEmptyString
 import app.accrescent.server.core.TcpPort
+import app.accrescent.server.core.causedBy
 import app.accrescent.server.domain.config.ApplicationConfig
 import app.accrescent.server.domain.config.AuthnConfig
 import app.accrescent.server.domain.config.GithubAuthnConfig
@@ -15,11 +17,14 @@ import app.accrescent.server.domain.config.SessionLifetime
 import app.accrescent.server.domain.config.ShutdownTimeout
 import app.accrescent.server.domain.ports.driven.cfgloader.ConfigLoadError
 import app.accrescent.server.domain.ports.driven.cfgloader.ConfigLoader
+import app.accrescent.server.domain.ports.driven.secretvault.SecretVault
 import app.accrescent.server.domain.uri.HttpUri
 import arrow.core.Either
+import arrow.core.getOrElse
 import arrow.core.raise.Raise
 import arrow.core.raise.either
 import io.smallrye.config.Converters
+import io.smallrye.config.SecretKeysHandler
 import io.smallrye.config.SmallRyeConfig
 import io.smallrye.config.SmallRyeConfigBuilder
 import org.eclipse.microprofile.config.spi.Converter
@@ -39,10 +44,25 @@ private const val AUTHN_SESSION_LIFETIME_PROPERTY = "authn.session.lifetime"
  *
  * The loader sources config values from SmallRye Config's
  * [default config sources](https://smallrye.io/smallrye-config/Latest/config/getting-started/#config-sources).
+ *
+ * Config values can reference secrets stored in the vaults provided by [secretVaults] via
+ * [secret expressions](https://smallrye.io/smallrye-config/Latest/config/secret-keys/), where
+ * `handler` is a key into [secretVaults] and `value` is the secret name passed to
+ * [SecretVault.getSecret].
+ *
+ * @param secretVaults the secret vaults to allow secret retrieval from, keyed by their secret
+ * handler names.
  */
-class SmallRyeConfigLoader : ConfigLoader {
+class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) : ConfigLoader {
     override fun loadConfig(): Either<ConfigLoadError, ApplicationConfig> = either {
-        val config = SmallRyeConfigBuilder().addDefaultSources().build()
+        val secretKeysHandlers = secretVaults
+            .map { (name, vault) -> SecretVaultSecretKeysHandler(name, vault) }
+            .toTypedArray()
+        val config = SmallRyeConfigBuilder()
+            .addDefaultSources()
+            .addDefaultInterceptors()
+            .withSecretKeysHandlers(*secretKeysHandlers)
+            .build()
 
         ApplicationConfig(
             server = ServerConfig(
@@ -95,6 +115,8 @@ class SmallRyeConfigLoader : ConfigLoader {
             raise.raise(ConfigLoadError.InvalidProperty(name, e.message.toString()))
         } catch (_: NoSuchElementException) {
             raise.raise(ConfigLoadError.MissingProperty(name))
+        } catch (e: SecretAccessException) {
+            raise.raise(ConfigLoadError.SecretInaccessible(name).causedBy(e.error))
         }
     }
 
@@ -136,4 +158,51 @@ class SmallRyeConfigLoader : ConfigLoader {
                 ?: throw IllegalArgumentException("\"$value\" is not a valid HTTP(S) URI")
         }
     }
+}
+
+/**
+ * A [SecretKeysHandler] which decodes secret expressions by retrieving secrets from a
+ * [SecretVault].
+ *
+ * Secret names are passed to [SecretVault.getSecret]. Their corresponding values must be valid
+ * UTF-8.
+ *
+ * Failures to retrieve or decode a secret are thrown as a [SecretAccessException].
+ *
+ * @param handlerName the name of this handler as used in secret expressions.
+ * @param vault the vault to retrieve secrets from.
+ */
+private class SecretVaultSecretKeysHandler(
+    private val handlerName: String,
+    private val vault: SecretVault,
+) : SecretKeysHandler {
+    override fun getName(): String {
+        return handlerName
+    }
+
+    override fun decode(secret: String): String {
+        val value = vault.getSecret(secret).getOrElse { throw SecretAccessException(it) }
+
+        return try {
+            value.copyToByteArray().decodeToString(throwOnInvalidSequence = true)
+        } catch (_: CharacterCodingException) {
+            throw SecretAccessException(InvalidSecretEncodingError(secret))
+        }
+    }
+}
+
+/**
+ * An exception indicating a secret referenced by a config property couldn't be accessed.
+ *
+ * @property error the error which caused the secret to be inaccessible.
+ */
+private class SecretAccessException(val error: Error) : RuntimeException(error.toString())
+
+/**
+ * A secret's value was not valid UTF-8.
+ *
+ * @property name the name of the secret.
+ */
+private class InvalidSecretEncodingError(val name: String) : Error() {
+    override val message = "secret \"$name\" is not valid UTF-8"
 }

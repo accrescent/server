@@ -40,4 +40,13 @@ sealed class ConfigLoadError : Error() {
     class InvalidProperty(val name: String, val reason: String) : ConfigLoadError() {
         override val message = "invalid value for configuration property \"$name\": $reason"
     }
+
+    /**
+     * A secret referenced by a config property's value couldn't be accessed.
+     *
+     * @property name the name of the config property whose value references the secret.
+     */
+    class SecretInaccessible(val name: String) : ConfigLoadError() {
+        override val message = "failed to access secret for configuration property \"$name\""
+    }
 }

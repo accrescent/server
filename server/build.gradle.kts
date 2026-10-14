@@ -7,6 +7,7 @@ import app.accrescent.server.build.ApkSetAttr
 import app.accrescent.server.build.ApkSetNameAttr
 import com.android.build.api.attributes.BuildTypeAttr
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     application
@@ -40,6 +41,7 @@ configurations.runtimeClasspath {
 }
 
 dependencies {
+    implementation(platform(libs.google.cloud.libraries.bom))
     implementation(libs.apksig)
     implementation(libs.appstore.api.grpc.kotlin)
     implementation(libs.arrow.core)
@@ -47,6 +49,7 @@ dependencies {
     implementation(libs.bundletool)
     implementation(libs.console.api.grpc.kotlin)
     implementation(libs.flyway.database.postgresql)
+    implementation(libs.google.cloud.secretmanager)
     implementation(libs.h2)
     implementation(libs.jena.iri3986)
     implementation(libs.postgresql.jdbc)
@@ -101,6 +104,10 @@ tasks.withType<Test> {
 // individual APKs as "testdata.apk.<name>.path" (where <name> is the APK's file name without
 // extension).
 tasks.test {
+    useJUnitPlatform {
+        excludeTags("integration")
+    }
+
     inputs.files(testApkSets)
     inputs.files(testApks)
 
@@ -113,6 +120,24 @@ tasks.test {
             systemProperty("testdata.apk.${artifact.file.nameWithoutExtension}.path", artifact.file.absolutePath)
         }
     }
+}
+
+// Register integration test task
+tasks.register<Test>("integrationTest") {
+    description = "Runs integration tests which require external services."
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("integration")
+    }
+
+    val propertiesFile = rootProject.layout.projectDirectory.file("integration-test.properties")
+    providers.fileContents(propertiesFile).asText.orNull?.let { text ->
+        val fileProperties = Properties().apply { load(text.reader()) }
+        systemProperties(fileProperties.mapKeys { "integrationTest.${it.key}" })
+    }
+    systemProperties(providers.gradlePropertiesPrefixedBy("integrationTest.").get())
 }
 
 kotlin {

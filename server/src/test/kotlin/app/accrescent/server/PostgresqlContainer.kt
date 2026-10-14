@@ -46,6 +46,25 @@ object PostgresqlContainer {
     }
 
     /**
+     * Runs a suspending lambda with the connection details for a new, empty database.
+     *
+     * Each call creates a new database, so the data accessible through the provided [Database] is
+     * not shared with any other caller. Attempts to use the [Database] outside of [block]'s scope
+     * result in undefined behavior.
+     *
+     * @param block the lambda to run with access to the new database.
+     * @return the return value of [block].
+     */
+    suspend fun <T> withNewDatabaseSuspending(block: suspend (Database) -> T): T {
+        val databaseName = "test_${UUID.randomUUID()}"
+
+        executeOnDefaultDatabase("CREATE DATABASE \"$databaseName\"")
+
+        return AutoCloseable { executeOnDefaultDatabase("DROP DATABASE \"$databaseName\"") }
+            .use { block(databaseFor(databaseName)) }
+    }
+
+    /**
      * Runs a lambda with a [DataSource] for a newly created copy of a template database.
      *
      * @param templateName the name of the template database to copy.
@@ -78,6 +97,22 @@ object PostgresqlContainer {
     }
 
     /**
+     * Constructs a [Database] for a given database.
+     *
+     * @param databaseName the name of the database to construct a [Database] for.
+     * @return a [Database] for the database named by [databaseName].
+     */
+    private fun databaseFor(databaseName: String): Database {
+        return Database(
+            host = container.host,
+            port = container.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT),
+            name = databaseName,
+            username = container.username,
+            password = container.password,
+        )
+    }
+
+    /**
      * Runs a statement against the container's default database.
      *
      * Certain statements such as CREATE DATABASE cannot run inside a transaction block or while
@@ -91,6 +126,23 @@ object PostgresqlContainer {
             connection.createStatement().use { statement -> statement.execute(sql) }
         }
     }
+
+    /**
+     * The connection details of a database in the container.
+     *
+     * @property host the host the container's PostgreSQL server is reachable at.
+     * @property port the port the container's PostgreSQL server is reachable at.
+     * @property name the name of the database.
+     * @property username the name of the user with access to the database.
+     * @property password the password of the user with access to the database.
+     */
+    data class Database(
+        val host: String,
+        val port: Int,
+        val name: String,
+        val username: String,
+        val password: String,
+    )
 
     /**
      * A PostgreSQL

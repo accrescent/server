@@ -10,6 +10,7 @@ import app.accrescent.server.core.TcpPort
 import app.accrescent.server.core.causedBy
 import app.accrescent.server.domain.config.ApplicationConfig
 import app.accrescent.server.domain.config.AuthnConfig
+import app.accrescent.server.domain.config.DataStoreConfig
 import app.accrescent.server.domain.config.GithubAuthnConfig
 import app.accrescent.server.domain.config.ServerConfig
 import app.accrescent.server.domain.config.SessionConfig
@@ -37,6 +38,12 @@ private const val AUTHN_GITHUB_CLIENT_ID_PROPERTY = "authn.github.client-id"
 private const val AUTHN_GITHUB_CLIENT_SECRET_PROPERTY = "authn.github.client-secret"
 private const val AUTHN_GITHUB_REDIRECT_URI_PROPERTY = "authn.github.redirect-uri"
 private const val AUTHN_SESSION_LIFETIME_PROPERTY = "authn.session.lifetime"
+private const val DATASTORE_BACKEND_PROPERTY = "datastore.backend"
+private const val DATASTORE_POSTGRESQL_HOST_PROPERTY = "datastore.postgresql.host"
+private const val DATASTORE_POSTGRESQL_PORT_PROPERTY = "datastore.postgresql.port"
+private const val DATASTORE_POSTGRESQL_DATABASE_PROPERTY = "datastore.postgresql.database"
+private const val DATASTORE_POSTGRESQL_USER_PROPERTY = "datastore.postgresql.user"
+private const val DATASTORE_POSTGRESQL_PASSWORD_PROPERTY = "datastore.postgresql.password"
 
 /**
  * A configuration loader which loads via
@@ -104,7 +111,49 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
                     ),
                 ),
             ),
+            dataStore = loadDataStoreConfig(config),
         )
+    }
+
+    /**
+     * Loads the data store configuration.
+     *
+     * Only the properties of the backend selected by [DATASTORE_BACKEND_PROPERTY] are loaded, so
+     * the properties of other backends need not be set.
+     */
+    context(_: Raise<ConfigLoadError>)
+    private fun loadDataStoreConfig(config: SmallRyeConfig): DataStoreConfig {
+        val backend = loadProperty(config, DATASTORE_BACKEND_PROPERTY, DATASTORE_BACKEND_CONVERTER)
+        return when (backend) {
+            DataStoreBackend.MEMORY -> DataStoreConfig.Memory
+            DataStoreBackend.POSTGRESQL -> DataStoreConfig.Postgresql(
+                host = loadProperty(
+                    config,
+                    DATASTORE_POSTGRESQL_HOST_PROPERTY,
+                    NON_EMPTY_STRING_CONVERTER,
+                ),
+                port = loadProperty(
+                    config,
+                    DATASTORE_POSTGRESQL_PORT_PROPERTY,
+                    TCP_PORT_CONVERTER,
+                ),
+                database = loadProperty(
+                    config,
+                    DATASTORE_POSTGRESQL_DATABASE_PROPERTY,
+                    NON_EMPTY_STRING_CONVERTER,
+                ),
+                user = loadProperty(
+                    config,
+                    DATASTORE_POSTGRESQL_USER_PROPERTY,
+                    NON_EMPTY_STRING_CONVERTER,
+                ),
+                password = loadProperty(
+                    config,
+                    DATASTORE_POSTGRESQL_PASSWORD_PROPERTY,
+                    NON_EMPTY_STRING_CONVERTER,
+                ),
+            )
+        }
     }
 
     context(raise: Raise<ConfigLoadError>)
@@ -157,7 +206,24 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
                 .getOrNull()
                 ?: throw IllegalArgumentException("\"$value\" is not a valid HTTP(S) URI")
         }
+        private val DATASTORE_BACKEND_CONVERTER = Converters.newEmptyValueConverter { value ->
+            DataStoreBackend.entries.find { it.propertyValue == value }
+                ?: throw IllegalArgumentException(
+                    "\"$value\" is not one of " +
+                            DataStoreBackend.entries.joinToString { "\"${it.propertyValue}\"" }
+                )
+        }
     }
+}
+
+/**
+ * A data store backend selectable via configuration.
+ *
+ * @property propertyValue the config property value which maps to this backend.
+ */
+private enum class DataStoreBackend(val propertyValue: String) {
+    MEMORY("memory"),
+    POSTGRESQL("postgresql"),
 }
 
 /**

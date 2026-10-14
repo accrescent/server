@@ -14,6 +14,9 @@ import org.junit.jupiter.api.AfterAll
  * [DataStore] conformance test suite for [MemoryDataStore].
  */
 class MemoryDataStoreConformanceTest : DataStoreConformanceTest() {
+    // MemoryDataStore achieves serializability by running transactions one at a time
+    override val runsTransactionsConcurrently = false
+
     override suspend fun <T> withDataStore(block: suspend (DataStore) -> T): T {
         val dataStore = MemoryDataStore(vertx)
         val result = block(dataStore)

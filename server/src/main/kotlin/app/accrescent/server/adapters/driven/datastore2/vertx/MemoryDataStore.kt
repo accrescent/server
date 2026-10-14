@@ -11,6 +11,8 @@ import app.accrescent.server.domain.crypto.Sha256Hash
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreError
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreResult
+import app.accrescent.server.domain.ports.driven.datastore2.HasPermissionRequest
+import app.accrescent.server.domain.ports.driven.datastore2.OrgApiView
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option
@@ -164,6 +166,23 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
         )
     }
 
+    override suspend fun findOrgApiViewById(
+        organizationId: String,
+    ): DataStoreResult<Option<OrgApiView>> = either {
+        connection.executeOptionalQuery(
+            "SELECT id FROM organizations WHERE id = ?",
+            Tuple.of(organizationId),
+        )
+            .map {
+                // Apps and app drafts aren't stored yet, so organizations never have any
+                OrgApiView(
+                    id = it.requireValue<String>(0).bind(),
+                    publishedAppCount = 0u,
+                    activeAppDraftCount = 0u,
+                )
+            }
+    }
+
     override suspend fun findOrgIdByOwnerUserId(
         userId: String,
     ): DataStoreResult<Option<String>> = either {
@@ -198,6 +217,20 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
         )
             .map { it.requireValue<String>(0).bind() }
     }
+
+    override suspend fun hasPermission(
+        request: HasPermissionRequest,
+    ): DataStoreResult<Boolean> = either {
+        val sql = when (request) {
+            is HasPermissionRequest.ViewOrganization ->
+                "SELECT EXISTS(SELECT 1 FROM organizations WHERE id = ? AND owner_user_id = ?)"
+        }
+
+        connection
+            .executeSingleQuery(sql, Tuple.of(request.resourceId, request.subjectId))
+            .requireValue<Boolean>(0)
+            .bind()
+    }
 }
 
 /**
@@ -212,6 +245,20 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
 context(_: Raise<DataStoreError>)
 private suspend fun SqlConnection.executeOptionalQuery(sql: String, params: Tuple): Option<Row> {
     return executeOptionalQuery(sql, params, Throwable::toDataStoreError)
+}
+
+/**
+ * Executes a query which should return exactly one row.
+ *
+ * Shorthand for [executeSingleQuery] using H2's error mapping.
+ *
+ * @param sql the SQL query to execute.
+ * @param params the query's parameters.
+ * @return the row returned by the query.
+ */
+context(_: Raise<DataStoreError>)
+private suspend fun SqlConnection.executeSingleQuery(sql: String, params: Tuple): Row {
+    return executeSingleQuery(sql, params, Throwable::toDataStoreError)
 }
 
 /**

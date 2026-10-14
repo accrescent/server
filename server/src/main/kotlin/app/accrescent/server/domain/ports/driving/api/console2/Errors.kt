@@ -12,9 +12,14 @@ import app.accrescent.server.core.Error
 sealed interface GetMyOrganizationError
 
 /**
+ * An error that can occur when getting an organization.
+ */
+sealed interface GetOrganizationError
+
+/**
  * A server-side error that can occur in any console API method.
  */
-sealed class ServerError : Error(), GetMyOrganizationError {
+sealed class ServerError : Error(), GetMyOrganizationError, GetOrganizationError {
     /**
      * The server encountered an unexpected internal error.
      */
@@ -31,8 +36,15 @@ sealed class ServerError : Error(), GetMyOrganizationError {
 }
 
 /**
+ * The caller does not have sufficient permission to perform the operation.
+ */
+class InsufficientPermissionError : Error(), GetOrganizationError {
+    override val message = "insufficient permission"
+}
+
+/**
  * The caller of a method which requires authentication is not authenticated.
  */
-class UnauthenticatedError : Error(), GetMyOrganizationError {
+class UnauthenticatedError : Error(), GetMyOrganizationError, GetOrganizationError {
     override val message = "unauthenticated"
 }

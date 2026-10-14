@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.postgresql.jdbc)
     implementation(libs.protobuf.java)
     implementation(libs.protobuf.kotlin)
+    implementation(libs.protovalidate)
     implementation(libs.slf4j.api)
     implementation(libs.smallrye.config.core)
     implementation(libs.vertx.auth.oauth2)

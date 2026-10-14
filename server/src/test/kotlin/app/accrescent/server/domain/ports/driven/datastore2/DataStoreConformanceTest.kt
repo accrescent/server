@@ -12,11 +12,15 @@ import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.crypto.Sha256Hash
 import arrow.core.None
 import arrow.core.Some
+import arrow.core.raise.either
 import arrow.core.right
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 
 /**
  * Conformance test suite for [DataStore] implementations.
@@ -251,6 +255,33 @@ abstract class DataStoreConformanceTest {
     }
 
     @Test
+    suspend fun `findOrgApiViewById returns API view of organization with given ID`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            val organization = dataStore
+                .runInTransaction { tx -> tx.findOrgApiViewById("org1").bind() }
+                .unwrap2()
+
+            assertEquals(Some(OrgApiView("org1", 0u, 0u)), organization)
+        }
+    }
+
+    @Test
+    suspend fun `findOrgApiViewById returns None for non-existent organization`() {
+        withMigratedDataStore { dataStore ->
+            val organization = dataStore
+                .runInTransaction { tx -> tx.findOrgApiViewById("org1").bind() }
+                .unwrap2()
+
+            assertEquals(None, organization)
+        }
+    }
+
+    @Test
     suspend fun `findOrgIdByOwnerUserId returns ID of organization owned by given user`() {
         withMigratedDataStore { dataStore ->
             dataStore.runInTransaction { tx ->
@@ -365,5 +396,41 @@ abstract class DataStoreConformanceTest {
 
             assertEquals(None, userId)
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("hasPermissionReturnsTrueWithMinimalRelationshipsTestCases")
+    suspend fun `hasPermission returns true with minimal relationships`(
+        testCase: HasPermissionReturnsTrueWithMinimalRelationships,
+    ) {
+        withMigratedDataStore { dataStore ->
+            val result = dataStore.runInTransaction { tx ->
+                testCase.saveRelationships(tx).bind()
+
+                tx.hasPermission(testCase.hasPermissionRequest).bind()
+            }
+                .unwrap2()
+
+            assertTrue(result)
+        }
+    }
+
+    companion object {
+        data class HasPermissionReturnsTrueWithMinimalRelationships(
+            val hasPermissionRequest: HasPermissionRequest,
+            val saveRelationships: suspend (DataStore.Transaction) -> DataStoreResult<Unit>,
+        )
+
+        @JvmStatic
+        private fun hasPermissionReturnsTrueWithMinimalRelationshipsTestCases()
+                : List<HasPermissionReturnsTrueWithMinimalRelationships> = listOf(
+            HasPermissionReturnsTrueWithMinimalRelationships(
+                HasPermissionRequest.ViewOrganization("org1", "user1"),
+            ) { tx ->
+                either {
+                    tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                }
+            },
+        )
     }
 }

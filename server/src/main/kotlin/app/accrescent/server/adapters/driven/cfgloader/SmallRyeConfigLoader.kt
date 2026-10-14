@@ -39,11 +39,11 @@ private const val AUTHN_GITHUB_CLIENT_SECRET_PROPERTY = "authn.github.client-sec
 private const val AUTHN_GITHUB_REDIRECT_URI_PROPERTY = "authn.github.redirect-uri"
 private const val AUTHN_SESSION_LIFETIME_PROPERTY = "authn.session.lifetime"
 private const val DATASTORE_BACKEND_PROPERTY = "datastore.backend"
-private const val DATASTORE_POSTGRESQL_HOST_PROPERTY = "datastore.postgresql.host"
-private const val DATASTORE_POSTGRESQL_PORT_PROPERTY = "datastore.postgresql.port"
-private const val DATASTORE_POSTGRESQL_DATABASE_PROPERTY = "datastore.postgresql.database"
-private const val DATASTORE_POSTGRESQL_USER_PROPERTY = "datastore.postgresql.user"
-private const val DATASTORE_POSTGRESQL_PASSWORD_PROPERTY = "datastore.postgresql.password"
+private const val DATASTORE_HOST_PROPERTY = "datastore.host"
+private const val DATASTORE_PORT_PROPERTY = "datastore.port"
+private const val DATASTORE_DATABASE_PROPERTY = "datastore.database"
+private const val DATASTORE_USER_PROPERTY = "datastore.user"
+private const val DATASTORE_PASSWORD_PROPERTY = "datastore.password"
 
 /**
  * A configuration loader which loads via
@@ -127,29 +127,17 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
         return when (backend) {
             DataStoreBackend.MEMORY -> DataStoreConfig.Memory
             DataStoreBackend.POSTGRESQL -> DataStoreConfig.Postgresql(
-                host = loadProperty(
-                    config,
-                    DATASTORE_POSTGRESQL_HOST_PROPERTY,
-                    NON_EMPTY_STRING_CONVERTER,
-                ),
-                port = loadProperty(
-                    config,
-                    DATASTORE_POSTGRESQL_PORT_PROPERTY,
-                    TCP_PORT_CONVERTER,
-                ),
+                host = loadProperty(config, DATASTORE_HOST_PROPERTY, NON_EMPTY_STRING_CONVERTER),
+                port = loadProperty(config, DATASTORE_PORT_PROPERTY, TCP_PORT_CONVERTER),
                 database = loadProperty(
                     config,
-                    DATASTORE_POSTGRESQL_DATABASE_PROPERTY,
+                    DATASTORE_DATABASE_PROPERTY,
                     NON_EMPTY_STRING_CONVERTER,
                 ),
-                user = loadProperty(
-                    config,
-                    DATASTORE_POSTGRESQL_USER_PROPERTY,
-                    NON_EMPTY_STRING_CONVERTER,
-                ),
+                user = loadProperty(config, DATASTORE_USER_PROPERTY, NON_EMPTY_STRING_CONVERTER),
                 password = loadProperty(
                     config,
-                    DATASTORE_POSTGRESQL_PASSWORD_PROPERTY,
+                    DATASTORE_PASSWORD_PROPERTY,
                     NON_EMPTY_STRING_CONVERTER,
                 ),
             )

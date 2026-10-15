@@ -8,6 +8,7 @@ import app.accrescent.server.core.ThrowableError
 import app.accrescent.server.core.causedBy
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.config.DataStoreConfig
+import app.accrescent.server.domain.config.PostgresqlEndpoint
 import app.accrescent.server.domain.crypto.Sha256Hash
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreError
@@ -22,6 +23,7 @@ import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.right
 import io.vertx.core.Vertx
+import io.vertx.jdbcclient.JDBCConnectOptions
 import io.vertx.jdbcclient.JDBCPool
 import io.vertx.sqlclient.Pool
 import io.vertx.sqlclient.PoolOptions
@@ -30,8 +32,9 @@ import io.vertx.sqlclient.SqlConnection
 import io.vertx.sqlclient.Tuple
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
-import org.postgresql.ds.PGSimpleDataSource
 import org.postgresql.util.PSQLState
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.sql.SQLException
 import java.time.OffsetDateTime
 
@@ -42,26 +45,49 @@ import java.time.OffsetDateTime
  * @param config the configuration for connecting to the PostgreSQL database.
  */
 class PostgresqlDataStore(vertx: Vertx, config: DataStoreConfig.Postgresql) : DataStore {
-    private val dataSource = PGSimpleDataSource().apply {
-        serverNames = arrayOf(config.host.value)
-        portNumbers = intArrayOf(config.port.value.toInt())
-        databaseName = config.database.value
-        user = config.user.value
-        password = config.password.value
+    private val jdbcUrl = run {
+        val database = URLEncoder.encode(config.database.value, StandardCharsets.UTF_8)
         // Make SERIALIZABLE the default isolation level so that we don't need to set it in a
         // separate statement on each connection
         //
         // https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-ISOLATION
-        options = "-c default_transaction_isolation=serializable"
+        val options = URLEncoder.encode(
+            "-c default_transaction_isolation=serializable",
+            StandardCharsets.UTF_8,
+        )
+
+        when (val endpoint = config.endpoint) {
+            is PostgresqlEndpoint.Direct ->
+                "jdbc:postgresql://${endpoint.host.value}:${endpoint.port.value}/$database" +
+                        "?options=$options"
+
+            // https://github.com/GoogleCloudPlatform/cloud-sql-jdbc-socket-factory/blob/128fda6a9ce4b4af99ab0f97686c21c58c3df95f/docs/jdbc.md#postgres-1
+            is PostgresqlEndpoint.CloudSqlInstance -> {
+                val instance = URLEncoder.encode(
+                    endpoint.connectionName.value,
+                    StandardCharsets.UTF_8,
+                )
+                "jdbc:postgresql:///$database?options=$options" +
+                        "&socketFactory=com.google.cloud.sql.postgres.SocketFactory" +
+                        "&cloudSqlInstance=$instance"
+            }
+        }
     }
     private val flyway = Flyway
         .configure()
-        .dataSource(dataSource)
+        .dataSource(jdbcUrl, config.user.value, config.password.value)
         .locations("db/migration/postgresql2")
         .validateOnMigrate(true)
         .validateMigrationNaming(true)
         .load()
-    private val pool: Pool = JDBCPool.pool(vertx, dataSource, PoolOptions())
+    private val pool: Pool = JDBCPool.pool(
+        vertx,
+        JDBCConnectOptions()
+            .setJdbcUrl(jdbcUrl)
+            .setUser(config.user.value)
+            .setPassword(config.password.value),
+        PoolOptions(),
+    )
 
     override fun migrateToHead(): DataStoreResult<Unit> {
         return try {

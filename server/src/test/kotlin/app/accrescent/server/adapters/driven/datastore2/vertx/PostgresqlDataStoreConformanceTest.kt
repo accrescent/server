@@ -9,6 +9,7 @@ import app.accrescent.server.core.NonEmptyString
 import app.accrescent.server.core.TcpPort
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.config.DataStoreConfig
+import app.accrescent.server.domain.config.PostgresqlEndpoint
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreConformanceTest
 import io.vertx.core.Vertx
@@ -21,9 +22,11 @@ class PostgresqlDataStoreConformanceTest : DataStoreConformanceTest() {
     override suspend fun <T> withDataStore(block: suspend (DataStore) -> T): T {
         return PostgresqlContainer.withNewDatabaseSuspending { database ->
             val config = DataStoreConfig.Postgresql(
-                host = NonEmptyString.fromString(database.host).unwrap(),
-                // Convert via a string so that out-of-range ports throw rather than truncate
-                port = TcpPort.new(database.port.toString().toUShort()).unwrap(),
+                endpoint = PostgresqlEndpoint.Direct(
+                    host = NonEmptyString.fromString(database.host).unwrap(),
+                    // Convert via a string so that out-of-range ports throw rather than truncate
+                    port = TcpPort.new(database.port.toString().toUShort()).unwrap(),
+                ),
                 database = NonEmptyString.fromString(database.name).unwrap(),
                 user = NonEmptyString.fromString(database.username).unwrap(),
                 password = NonEmptyString.fromString(database.password).unwrap(),

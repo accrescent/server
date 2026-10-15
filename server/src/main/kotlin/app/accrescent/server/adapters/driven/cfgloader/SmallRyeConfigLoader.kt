@@ -13,6 +13,7 @@ import app.accrescent.server.domain.config.ApplicationConfig
 import app.accrescent.server.domain.config.AuthnConfig
 import app.accrescent.server.domain.config.DataStoreConfig
 import app.accrescent.server.domain.config.GithubAuthnConfig
+import app.accrescent.server.domain.config.PostgresqlEndpoint
 import app.accrescent.server.domain.config.ServerConfig
 import app.accrescent.server.domain.config.SessionConfig
 import app.accrescent.server.domain.config.SessionLifetime
@@ -49,6 +50,7 @@ private const val DATASTORE_PORT_PROPERTY = "datastore.port"
 private const val DATASTORE_DATABASE_PROPERTY = "datastore.database"
 private const val DATASTORE_USER_PROPERTY = "datastore.user"
 private const val DATASTORE_PASSWORD_PROPERTY = "datastore.password"
+private const val DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY = "datastore.cloud-sql-instance"
 
 /**
  * A configuration loader which loads via
@@ -135,15 +137,18 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
         )) {
             DataStoreBackend.MEMORY -> {
                 for (name in DATASTORE_POSTGRESQL_PROPERTIES) {
-                    ensureUnset(config, name, DATASTORE_BACKEND_PROPERTY, backend.propertyValue)
+                    ensureUnset(
+                        config,
+                        name,
+                        DATASTORE_BACKEND_PROPERTY,
+                        Some(backend.propertyValue),
+                    )
                 }
                 DataStoreConfig.Memory
             }
 
             DataStoreBackend.POSTGRESQL -> DataStoreConfig.Postgresql(
-                host = loadProperty(config, DATASTORE_HOST_PROPERTY, NON_EMPTY_STRING_CONVERTER),
-                port = loadOptionalProperty(config, DATASTORE_PORT_PROPERTY, TCP_PORT_CONVERTER)
-                    .getOrElse { DEFAULT_DATASTORE_PORT },
+                endpoint = loadPostgresqlEndpoint(config),
                 database = loadOptionalProperty(
                     config,
                     DATASTORE_DATABASE_PROPERTY,
@@ -158,6 +163,35 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
                     NON_EMPTY_STRING_CONVERTER,
                 ),
             )
+        }
+    }
+
+    /**
+     * Loads the PostgreSQL endpoint configuration.
+     *
+     * If [DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY] is set, the endpoint is that Cloud SQL instance
+     * and [DATASTORE_HOST_PROPERTY] and [DATASTORE_PORT_PROPERTY] must not be set.
+     */
+    context(_: Raise<ConfigLoadError>)
+    private fun loadPostgresqlEndpoint(config: SmallRyeConfig): PostgresqlEndpoint {
+        val cloudSqlInstance = loadOptionalProperty(
+            config,
+            DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY,
+            NON_EMPTY_STRING_CONVERTER,
+        )
+        return when (cloudSqlInstance) {
+            None -> PostgresqlEndpoint.Direct(
+                host = loadProperty(config, DATASTORE_HOST_PROPERTY, NON_EMPTY_STRING_CONVERTER),
+                port = loadOptionalProperty(config, DATASTORE_PORT_PROPERTY, TCP_PORT_CONVERTER)
+                    .getOrElse { DEFAULT_DATASTORE_PORT },
+            )
+
+            is Some -> {
+                for (name in listOf(DATASTORE_HOST_PROPERTY, DATASTORE_PORT_PROPERTY)) {
+                    ensureUnset(config, name, DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY, None)
+                }
+                PostgresqlEndpoint.CloudSqlInstance(cloudSqlInstance.value)
+            }
         }
     }
 
@@ -192,7 +226,7 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
         config: SmallRyeConfig,
         name: String,
         conflictingName: String,
-        conflictingValue: String,
+        conflictingValue: Option<String>,
     ) {
         ensure(!config.isPropertyPresent(name)) {
             ConfigLoadError.IncompatibleProperty(name, conflictingName, conflictingValue)
@@ -210,6 +244,7 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
             DATASTORE_DATABASE_PROPERTY,
             DATASTORE_USER_PROPERTY,
             DATASTORE_PASSWORD_PROPERTY,
+            DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY,
         )
 
         private val INET_ADDRESS_LITERAL_CONVERTER =

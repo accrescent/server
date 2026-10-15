@@ -7,6 +7,8 @@ package app.accrescent.server.domain.ports.driven.cfgloader
 import app.accrescent.server.core.Error
 import app.accrescent.server.domain.config.ApplicationConfig
 import arrow.core.Either
+import arrow.core.None
+import arrow.core.Option
 
 /**
  * A loader for the application configuration.
@@ -45,17 +47,20 @@ sealed class ConfigLoadError : Error() {
      * A set config property is incompatible with another set config property.
      *
      * @property name the name of the incompatible config property.
-     * @property conflictingName the name of the config property whose value [name] is incompatible
-     * with.
-     * @property conflictingValue the value of [conflictingName] which [name] is incompatible with.
+     * @property conflictingName the name of the config property [name] is incompatible with.
+     * @property conflictingValue the value of [conflictingName] which [name] is incompatible with,
+     * or [None] if [name] is incompatible with [conflictingName] being set to any value.
      */
     class IncompatibleProperty(
         val name: String,
         val conflictingName: String,
-        val conflictingValue: String,
+        val conflictingValue: Option<String>,
     ) : ConfigLoadError() {
         override val message = "configuration property \"$name\" is incompatible with " +
-                "$conflictingName=$conflictingValue"
+                conflictingValue.fold(
+                    { "configuration property \"$conflictingName\"" },
+                    { "$conflictingName=$it" },
+                )
     }
 
     /**

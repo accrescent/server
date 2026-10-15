@@ -8,6 +8,7 @@ import app.accrescent.server.core.Error
 import app.accrescent.server.core.NonEmptyString
 import app.accrescent.server.core.TcpPort
 import app.accrescent.server.core.causedBy
+import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.config.ApplicationConfig
 import app.accrescent.server.domain.config.AuthnConfig
 import app.accrescent.server.domain.config.DataStoreConfig
@@ -21,8 +22,12 @@ import app.accrescent.server.domain.ports.driven.cfgloader.ConfigLoader
 import app.accrescent.server.domain.ports.driven.secretvault.SecretVault
 import app.accrescent.server.domain.uri.HttpUri
 import arrow.core.Either
+import arrow.core.None
+import arrow.core.Option
+import arrow.core.Some
 import arrow.core.getOrElse
 import arrow.core.raise.Raise
+import arrow.core.raise.context.ensure
 import arrow.core.raise.either
 import io.smallrye.config.Converters
 import io.smallrye.config.SecretKeysHandler
@@ -118,23 +123,35 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
     /**
      * Loads the data store configuration.
      *
-     * Only the properties of the backend selected by [DATASTORE_BACKEND_PROPERTY] are loaded, so
-     * the properties of other backends need not be set.
+     * Only the properties of the backend selected by [DATASTORE_BACKEND_PROPERTY] are loaded. The
+     * properties of other backends must not be set.
      */
     context(_: Raise<ConfigLoadError>)
     private fun loadDataStoreConfig(config: SmallRyeConfig): DataStoreConfig {
-        val backend = loadProperty(config, DATASTORE_BACKEND_PROPERTY, DATASTORE_BACKEND_CONVERTER)
-        return when (backend) {
-            DataStoreBackend.MEMORY -> DataStoreConfig.Memory
+        return when (val backend = loadProperty(
+            config,
+            DATASTORE_BACKEND_PROPERTY,
+            DATASTORE_BACKEND_CONVERTER,
+        )) {
+            DataStoreBackend.MEMORY -> {
+                for (name in DATASTORE_POSTGRESQL_PROPERTIES) {
+                    ensureUnset(config, name, DATASTORE_BACKEND_PROPERTY, backend.propertyValue)
+                }
+                DataStoreConfig.Memory
+            }
+
             DataStoreBackend.POSTGRESQL -> DataStoreConfig.Postgresql(
                 host = loadProperty(config, DATASTORE_HOST_PROPERTY, NON_EMPTY_STRING_CONVERTER),
-                port = loadProperty(config, DATASTORE_PORT_PROPERTY, TCP_PORT_CONVERTER),
-                database = loadProperty(
+                port = loadOptionalProperty(config, DATASTORE_PORT_PROPERTY, TCP_PORT_CONVERTER)
+                    .getOrElse { DEFAULT_DATASTORE_PORT },
+                database = loadOptionalProperty(
                     config,
                     DATASTORE_DATABASE_PROPERTY,
                     NON_EMPTY_STRING_CONVERTER,
-                ),
-                user = loadProperty(config, DATASTORE_USER_PROPERTY, NON_EMPTY_STRING_CONVERTER),
+                )
+                    .getOrElse { DEFAULT_POSTGRESQL_DATABASE },
+                user = loadOptionalProperty(config, DATASTORE_USER_PROPERTY, NON_EMPTY_STRING_CONVERTER)
+                    .getOrElse { DEFAULT_POSTGRESQL_USER },
                 password = loadProperty(
                     config,
                     DATASTORE_PASSWORD_PROPERTY,
@@ -157,7 +174,44 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
         }
     }
 
+    context(_: Raise<ConfigLoadError>)
+    private fun <T> loadOptionalProperty(
+        config: SmallRyeConfig,
+        name: String,
+        converter: Converter<T>,
+    ): Option<T> {
+        return if (config.isPropertyPresent(name)) {
+            Some(loadProperty(config, name, converter))
+        } else {
+            None
+        }
+    }
+
+    context(_: Raise<ConfigLoadError>)
+    private fun ensureUnset(
+        config: SmallRyeConfig,
+        name: String,
+        conflictingName: String,
+        conflictingValue: String,
+    ) {
+        ensure(!config.isPropertyPresent(name)) {
+            ConfigLoadError.IncompatibleProperty(name, conflictingName, conflictingValue)
+        }
+    }
+
     private companion object {
+        private val DEFAULT_DATASTORE_PORT = TcpPort.new(5432u).unwrap()
+        private val DEFAULT_POSTGRESQL_DATABASE = NonEmptyString.fromString("postgres").unwrap()
+        private val DEFAULT_POSTGRESQL_USER = NonEmptyString.fromString("postgres").unwrap()
+
+        private val DATASTORE_POSTGRESQL_PROPERTIES = listOf(
+            DATASTORE_HOST_PROPERTY,
+            DATASTORE_PORT_PROPERTY,
+            DATASTORE_DATABASE_PROPERTY,
+            DATASTORE_USER_PROPERTY,
+            DATASTORE_PASSWORD_PROPERTY,
+        )
+
         private val INET_ADDRESS_LITERAL_CONVERTER =
             Converters.newEmptyValueConverter { InetAddress.ofLiteral(it) }
         private val TCP_PORT_CONVERTER = Converters.newEmptyValueConverter { value ->

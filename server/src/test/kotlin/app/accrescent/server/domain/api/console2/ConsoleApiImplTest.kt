@@ -22,9 +22,12 @@ import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
+import app.accrescent.server.domain.ports.driving.api.console2.GetSelfResponse
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
 import app.accrescent.server.domain.ports.driving.api.console2.Organization
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
+import app.accrescent.server.domain.ports.driving.api.console2.User
+import app.accrescent.server.domain.ports.driving.api.console2.UserRole
 import arrow.core.None
 import arrow.core.Some
 import io.vertx.core.Vertx
@@ -129,6 +132,56 @@ class ConsoleApiImplTest {
         }
     }
 
+    @Test
+    suspend fun `getSelf returns Unauthenticated for unauthenticated request`() {
+        withMigratedDataStore { dataStore ->
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.getSelf(CallContext(None))
+
+            assertInstanceOf<UnauthenticatedError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `getSelf returns user with no roles when user is not the admin`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org2", "user2", ExternalUserId.Github(2), UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+            val consoleApi = makeConsoleApi(dataStore, admin = ExternalUserId.Github(2))
+
+            val response = consoleApi.getSelf(context)
+
+            assertEquals(
+                GetSelfResponse(User("u_7Vg3AgHSuhCI6g3btbAESz", emptySet())),
+                response.unwrap(),
+            )
+        }
+    }
+
+    @Test
+    suspend fun `getSelf returns user with reviewer and publisher roles when user is the admin`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.getSelf(context)
+
+            assertEquals(
+                GetSelfResponse(
+                    User(
+                        id = "u_7Vg3AgHSuhCI6g3btbAESz",
+                        roles = setOf(UserRole.REVIEWER, UserRole.PUBLISHER),
+                    ),
+                ),
+                response.unwrap(),
+            )
+        }
+    }
+
     private companion object {
         private val vertx = Vertx.vertx()
 
@@ -151,8 +204,9 @@ class ConsoleApiImplTest {
         private fun makeConsoleApi(
             dataStore: DataStore,
             timestampSource: TimestampSource = FixedTimestampSource(),
+            admin: ExternalUserId = ExternalUserId.Github(1),
         ): ConsoleApi {
-            return ConsoleApiImpl(dataStore, timestampSource)
+            return ConsoleApiImpl(dataStore, timestampSource, admin)
         }
 
         /**

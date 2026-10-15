@@ -29,4 +29,11 @@ interface ConsoleApi {
         context: CallContext,
         request: GetOrganizationRequest,
     ): Either<GetOrganizationError, GetOrganizationResponse>
+
+    /**
+     * Gets the currently authenticated user.
+     *
+     * @param context the context for this call.
+     */
+    suspend fun getSelf(context: CallContext): Either<GetSelfError, GetSelfResponse>
 }

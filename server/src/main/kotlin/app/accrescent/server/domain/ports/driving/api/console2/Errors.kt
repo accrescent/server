@@ -17,9 +17,14 @@ sealed interface GetMyOrganizationError
 sealed interface GetOrganizationError
 
 /**
+ * An error that can occur when getting the authenticated user.
+ */
+sealed interface GetSelfError
+
+/**
  * A server-side error that can occur in any console API method.
  */
-sealed class ServerError : Error(), GetMyOrganizationError, GetOrganizationError {
+sealed class ServerError : Error(), GetMyOrganizationError, GetOrganizationError, GetSelfError {
     /**
      * The server encountered an unexpected internal error.
      */
@@ -45,6 +50,6 @@ class InsufficientPermissionError : Error(), GetOrganizationError {
 /**
  * The caller of a method which requires authentication is not authenticated.
  */
-class UnauthenticatedError : Error(), GetMyOrganizationError, GetOrganizationError {
+class UnauthenticatedError : Error(), GetMyOrganizationError, GetOrganizationError, GetSelfError {
     override val message = "unauthenticated"
 }

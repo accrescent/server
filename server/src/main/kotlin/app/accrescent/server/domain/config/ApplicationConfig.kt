@@ -6,6 +6,7 @@ package app.accrescent.server.domain.config
 
 import app.accrescent.server.core.NonEmptyString
 import app.accrescent.server.core.TcpPort
+import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.uri.HttpUri
 import java.net.InetAddress
 
@@ -14,11 +15,13 @@ import java.net.InetAddress
  *
  * @property server the HTTP server configuration.
  * @property authn the user authentication configuration.
+ * @property authz the user authorization configuration.
  * @property dataStore the data store configuration.
  */
 data class ApplicationConfig(
     val server: ServerConfig,
     val authn: AuthnConfig,
+    val authz: AuthzConfig,
     val dataStore: DataStoreConfig,
 )
 
@@ -63,6 +66,13 @@ data class GithubAuthnConfig(
  * @property lifetime how long a user session remains valid after login.
  */
 data class SessionConfig(val lifetime: SessionLifetime)
+
+/**
+ * User authorization configuration.
+ *
+ * @property adminExternalUserId the external identity of the administrator user.
+ */
+data class AuthzConfig(val adminExternalUserId: ExternalUserId)
 
 /**
  * Data store configuration.

@@ -60,7 +60,11 @@ fun main() {
         sessionLifetime = config.authn.session.lifetime,
         timestampSource = timestampSource,
     )
-    val consoleApi = ConsoleApiImpl(dataStore, timestampSource)
+    val consoleApi = ConsoleApiImpl(
+        dataStore = dataStore,
+        timestampSource = timestampSource,
+        adminExternalUserId = config.authz.adminExternalUserId,
+    )
 
     // Start the HTTP server
     val deployment = vertx.deployVerticle(

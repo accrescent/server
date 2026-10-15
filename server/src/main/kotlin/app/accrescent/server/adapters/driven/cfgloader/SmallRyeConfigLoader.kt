@@ -9,8 +9,10 @@ import app.accrescent.server.core.NonEmptyString
 import app.accrescent.server.core.TcpPort
 import app.accrescent.server.core.causedBy
 import app.accrescent.server.core.unwrap
+import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.config.ApplicationConfig
 import app.accrescent.server.domain.config.AuthnConfig
+import app.accrescent.server.domain.config.AuthzConfig
 import app.accrescent.server.domain.config.CloudSqlAuthn
 import app.accrescent.server.domain.config.DataStoreConfig
 import app.accrescent.server.domain.config.GithubAuthnConfig
@@ -46,6 +48,7 @@ private const val AUTHN_GITHUB_CLIENT_ID_PROPERTY = "authn.github.client-id"
 private const val AUTHN_GITHUB_CLIENT_SECRET_PROPERTY = "authn.github.client-secret"
 private const val AUTHN_GITHUB_REDIRECT_URI_PROPERTY = "authn.github.redirect-uri"
 private const val AUTHN_SESSION_LIFETIME_PROPERTY = "authn.session.lifetime"
+private const val AUTHZ_ADMIN_GITHUB_USER_ID_PROPERTY = "authz.admin.github-user-id"
 private const val DATASTORE_BACKEND_PROPERTY = "datastore.backend"
 private const val DATASTORE_HOST_PROPERTY = "datastore.host"
 private const val DATASTORE_PORT_PROPERTY = "datastore.port"
@@ -121,6 +124,13 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
                         AUTHN_SESSION_LIFETIME_PROPERTY,
                         SESSION_LIFETIME_CONVERTER,
                     ),
+                ),
+            ),
+            authz = AuthzConfig(
+                adminExternalUserId = loadProperty(
+                    config,
+                    AUTHZ_ADMIN_GITHUB_USER_ID_PROPERTY,
+                    GITHUB_USER_ID_CONVERTER,
                 ),
             ),
             dataStore = loadDataStoreConfig(config),
@@ -325,6 +335,11 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
                     "\"$value\" is not an integer in the range [1, 8760] followed by an \"h\" " +
                             "(e.g. \"336h\")"
                 )
+        }
+        private val GITHUB_USER_ID_CONVERTER = Converters.newEmptyValueConverter { value ->
+            value.toLongOrNull()
+                ?.let { ExternalUserId.Github(it) }
+                ?: throw IllegalArgumentException("\"$value\" is not a 64-bit signed integer")
         }
         private val BOOLEAN_CONVERTER = Converters.newEmptyValueConverter { value ->
             value.toBooleanStrictOrNull()

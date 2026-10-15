@@ -20,6 +20,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
@@ -321,6 +322,79 @@ abstract class DataStoreConformanceTest {
                 .unwrapErr()
 
             assertInstanceOf<DataStoreError.ConsistencyViolation>(error)
+        }
+    }
+
+    @Test
+    suspend fun `deleteActiveSession deletes active session with given ID hash`() {
+        withMigratedDataStore { dataStore ->
+            val idHash = Sha256Hash.hash("session1".toByteArray())
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createSession(idHash, "user1", UNIX_EPOCH, UNIX_EPOCH.plusDays(1)).bind()
+            }
+                .unwrap2()
+
+            dataStore.runInTransaction { tx ->
+                tx.deleteActiveSession(idHash, UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+            val userId = dataStore.runInTransaction { tx ->
+                tx.findUserIdByActiveSessionIdHash(idHash, UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            assertEquals(None, userId)
+        }
+    }
+
+    @Test
+    suspend fun `deleteActiveSession returns true when given ID hash of active session`() {
+        withMigratedDataStore { dataStore ->
+            val idHash = Sha256Hash.hash("session1".toByteArray())
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createSession(idHash, "user1", UNIX_EPOCH, UNIX_EPOCH.plusDays(1)).bind()
+            }
+                .unwrap2()
+
+            val deleted = dataStore.runInTransaction { tx ->
+                tx.deleteActiveSession(idHash, UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            assertTrue(deleted)
+        }
+    }
+
+    @Test
+    suspend fun `deleteActiveSession returns false for non-existent session`() {
+        withMigratedDataStore { dataStore ->
+            val deleted = dataStore.runInTransaction { tx ->
+                tx.deleteActiveSession(Sha256Hash.hash("session1".toByteArray()), UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            assertFalse(deleted)
+        }
+    }
+
+    @Test
+    suspend fun `deleteActiveSession returns false for expired session`() {
+        withMigratedDataStore { dataStore ->
+            val idHash = Sha256Hash.hash("session1".toByteArray())
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createSession(idHash, "user1", UNIX_EPOCH, UNIX_EPOCH.plusDays(1)).bind()
+            }
+                .unwrap2()
+
+            val deleted = dataStore.runInTransaction { tx ->
+                tx.deleteActiveSession(idHash, UNIX_EPOCH.plusDays(1)).bind()
+            }
+                .unwrap2()
+
+            assertFalse(deleted)
         }
     }
 

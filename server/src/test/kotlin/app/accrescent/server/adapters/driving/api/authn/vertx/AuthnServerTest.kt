@@ -11,12 +11,20 @@ import app.accrescent.server.core.NonEmptyString
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.IdGenerator
 import app.accrescent.server.domain.api.authn.AuthenticationApiImpl
+import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.config.AuthnConfig
 import app.accrescent.server.domain.config.GithubAuthnConfig
 import app.accrescent.server.domain.config.SessionConfig
 import app.accrescent.server.domain.config.SessionLifetime
 import app.accrescent.server.domain.ports.driving.api.authn.AuthenticationApi
+import app.accrescent.server.domain.ports.driving.api.authn.CreateSessionError
+import app.accrescent.server.domain.ports.driving.api.authn.CreateSessionResponse
+import app.accrescent.server.domain.ports.driving.api.authn.LogOutError
+import app.accrescent.server.domain.ports.driving.api.authn.ServerError
 import app.accrescent.server.domain.uri.HttpUri
+import arrow.core.Either
+import arrow.core.Option
+import arrow.core.left
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.QueryStringDecoder
 import io.restassured.RestAssured.given
@@ -32,10 +40,12 @@ import io.vertx.kotlin.coroutines.dispatcher
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.ValueSource
 import kotlin.io.encoding.Base64
 
@@ -43,6 +53,7 @@ private const val GITHUB_LOGIN_PATH = "/auth/github/login"
 private const val GITHUB_CALLBACK_PATH = "/auth/github/callback"
 private const val GITHUB_STATE_COOKIE_NAME = "__Host-Http-github-state"
 private const val GITHUB_CODE_VERIFIER_COOKIE_NAME = "__Host-Http-github-code-verifier"
+private const val SESSION_PATH = "/auth/session"
 private const val SESSION_COOKIE_NAME = "__Host-Http-session"
 
 private const val CLIENT_ID = "test-client-id"
@@ -57,7 +68,7 @@ private const val SESSION_LIFETIME_SECONDS = 3600L
 
 class AuthnServerTest {
     @ParameterizedTest
-    @ValueSource(strings = [GITHUB_LOGIN_PATH, GITHUB_CALLBACK_PATH])
+    @ValueSource(strings = [GITHUB_LOGIN_PATH, GITHUB_CALLBACK_PATH, SESSION_PATH])
     fun `responses are not cacheable`(path: String) {
         val response = request(path)
 
@@ -71,6 +82,15 @@ class AuthnServerTest {
 
         assertEquals(HttpResponseStatus.METHOD_NOT_ALLOWED.code(), response.statusCode)
         assertEquals("GET", response.header(HttpHeaders.ALLOW.toString()))
+    }
+
+    @ParameterizedTest
+    @EnumSource(Method::class, names = ["DELETE"], mode = EnumSource.Mode.EXCLUDE)
+    fun `non-DELETE request to session endpoint is rejected`(method: Method) {
+        val response = request(SESSION_PATH, method = method)
+
+        assertEquals(HttpResponseStatus.METHOD_NOT_ALLOWED.code(), response.statusCode)
+        assertEquals("DELETE", response.header(HttpHeaders.ALLOW.toString()))
     }
 
     @Test
@@ -259,6 +279,56 @@ class AuthnServerTest {
     }
 
     @Test
+    fun `logout with active session succeeds and clears session cookie`() {
+        val sessionId = logIn()
+
+        val response = request(SESSION_PATH, SESSION_COOKIE_NAME to sessionId, method = Method.DELETE)
+
+        assertEquals(HttpResponseStatus.NO_CONTENT.code(), response.statusCode)
+        assertEquals(expiredSessionCookie(), response.detailedCookie(SESSION_COOKIE_NAME))
+    }
+
+    @Test
+    fun `logout invalidates session`() {
+        val sessionId = logIn()
+        request(SESSION_PATH, SESSION_COOKIE_NAME to sessionId, method = Method.DELETE)
+
+        val response = request(SESSION_PATH, SESSION_COOKIE_NAME to sessionId, method = Method.DELETE)
+
+        assertEquals(HttpResponseStatus.UNAUTHORIZED.code(), response.statusCode)
+    }
+
+    @Test
+    fun `logout without session cookie returns unauthorized`() {
+        val response = request(SESSION_PATH, method = Method.DELETE)
+
+        assertEquals(HttpResponseStatus.UNAUTHORIZED.code(), response.statusCode)
+    }
+
+    @Test
+    fun `logout with invalid session returns unauthorized and clears session cookie`() {
+        val response = request(
+            SESSION_PATH,
+            SESSION_COOKIE_NAME to "invalid-session",
+            method = Method.DELETE,
+        )
+
+        assertEquals(HttpResponseStatus.UNAUTHORIZED.code(), response.statusCode)
+        assertEquals(expiredSessionCookie(), response.detailedCookie(SESSION_COOKIE_NAME))
+    }
+
+    @Test
+    fun `logout failing with server error does not clear session cookie`() {
+        server.close().await()
+        server = startAuthnServer(UnavailableAuthenticationApi())
+
+        val response = request(SESSION_PATH, SESSION_COOKIE_NAME to "session", method = Method.DELETE)
+
+        assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE.code(), response.statusCode)
+        assertNull(response.detailedCookie(SESSION_COOKIE_NAME))
+    }
+
+    @Test
     fun `request for unknown path is not found`() {
         val response = request("/auth/unknown/login")
 
@@ -348,6 +418,20 @@ class AuthnServerTest {
             .request(method, "http://localhost:${server.actualPort()}$pathAndQuery")
     }
 
+    /**
+     * Logs in via the GitHub callback.
+     *
+     * @return the ID of the created session.
+     */
+    private fun logIn(): String {
+        return request(
+            "$GITHUB_CALLBACK_PATH?code=$VALID_CODE&state=$VALID_STATE",
+            GITHUB_STATE_COOKIE_NAME to VALID_STATE,
+            GITHUB_CODE_VERIFIER_COOKIE_NAME to VALID_CODE_VERIFIER,
+        )
+            .cookie(SESSION_COOKIE_NAME)
+    }
+
     private companion object {
         private val vertx = Vertx.vertx()
 
@@ -402,6 +486,29 @@ class AuthnServerTest {
                 }
 
                 else -> response.setStatusCode(HttpResponseStatus.NOT_FOUND.code()).end()
+            }
+        }
+
+        private fun expiredSessionCookie(): Cookie {
+            return hostHttpCookieBuilder(SESSION_COOKIE_NAME, "")
+                .setSameSite("Strict")
+                .setMaxAge(0)
+                .build()
+        }
+
+        /**
+         * An [AuthenticationApi] whose methods always fail with
+         * [ServerError.ServiceUnavailableError].
+         */
+        private class UnavailableAuthenticationApi : AuthenticationApi {
+            override suspend fun createSession(
+                caller: ExternalUserId,
+            ): Either<CreateSessionError, CreateSessionResponse> {
+                return ServerError.ServiceUnavailableError().left()
+            }
+
+            override suspend fun logOut(sessionId: Option<String>): Either<LogOutError, Unit> {
+                return ServerError.ServiceUnavailableError().left()
             }
         }
     }

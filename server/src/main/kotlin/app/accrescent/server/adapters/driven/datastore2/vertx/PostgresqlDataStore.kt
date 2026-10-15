@@ -4,11 +4,15 @@
 
 package app.accrescent.server.adapters.driven.datastore2.vertx
 
+import app.accrescent.server.core.NonEmptyString
 import app.accrescent.server.core.ThrowableError
 import app.accrescent.server.core.causedBy
+import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.authn.ExternalUserId
+import app.accrescent.server.domain.config.CloudSqlAuthn
 import app.accrescent.server.domain.config.DataStoreConfig
 import app.accrescent.server.domain.config.PostgresqlEndpoint
+import app.accrescent.server.domain.config.PostgresqlPasswordCredentials
 import app.accrescent.server.domain.crypto.Sha256Hash
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreError
@@ -67,15 +71,30 @@ class PostgresqlDataStore(vertx: Vertx, config: DataStoreConfig.Postgresql) : Da
                     endpoint.connectionName.value,
                     StandardCharsets.UTF_8,
                 )
+                val enableIamAuth = endpoint.authn is CloudSqlAuthn.Iam
                 "jdbc:postgresql:///$database?options=$options" +
                         "&socketFactory=com.google.cloud.sql.postgres.SocketFactory" +
-                        "&cloudSqlInstance=$instance"
+                        "&cloudSqlInstance=$instance" +
+                        "&enableIamAuth=$enableIamAuth"
             }
         }
     }
+    private val credentials = when (val endpoint = config.endpoint) {
+        is PostgresqlEndpoint.Direct -> endpoint.credentials
+        is PostgresqlEndpoint.CloudSqlInstance -> when (val authn = endpoint.authn) {
+            is CloudSqlAuthn.Password -> authn.credentials
+            // The connector ignores the password when using IAM authentication, but the driver
+            // still requires it to be non-empty
+            //
+            // https://github.com/GoogleCloudPlatform/cloud-sql-jdbc-socket-factory/blob/128fda6a9ce4b4af99ab0f97686c21c58c3df95f/docs/jdbc.md#iam-authentication
+            is CloudSqlAuthn.Iam ->
+                PostgresqlPasswordCredentials(authn.user, IAM_PLACEHOLDER_PASSWORD)
+        }
+    }
+
     private val flyway = Flyway
         .configure()
-        .dataSource(jdbcUrl, config.user.value, config.password.value)
+        .dataSource(jdbcUrl, credentials.user.value, credentials.password.value)
         .locations("db/migration/postgresql2")
         .validateOnMigrate(true)
         .validateMigrationNaming(true)
@@ -84,8 +103,8 @@ class PostgresqlDataStore(vertx: Vertx, config: DataStoreConfig.Postgresql) : Da
         vertx,
         JDBCConnectOptions()
             .setJdbcUrl(jdbcUrl)
-            .setUser(config.user.value)
-            .setPassword(config.password.value),
+            .setUser(credentials.user.value)
+            .setPassword(credentials.password.value),
         PoolOptions(),
     )
 
@@ -118,6 +137,10 @@ class PostgresqlDataStore(vertx: Vertx, config: DataStoreConfig.Postgresql) : Da
         } else {
             Unit.right()
         }
+    }
+
+    private companion object {
+        private val IAM_PLACEHOLDER_PASSWORD = NonEmptyString.fromString("unused").unwrap()
     }
 }
 

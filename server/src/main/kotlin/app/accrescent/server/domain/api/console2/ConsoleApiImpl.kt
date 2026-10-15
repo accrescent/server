@@ -5,6 +5,7 @@
 package app.accrescent.server.domain.api.console2
 
 import app.accrescent.server.core.bindMapLeft
+import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.HasPermissionRequest
 import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
@@ -15,9 +16,14 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganization
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
+import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
+import app.accrescent.server.domain.ports.driving.api.console2.GetSelfResponse
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
 import app.accrescent.server.domain.ports.driving.api.console2.Organization
+import app.accrescent.server.domain.ports.driving.api.console2.User
+import app.accrescent.server.domain.ports.driving.api.console2.UserRole
 import arrow.core.Either
+import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 
@@ -29,10 +35,12 @@ private const val PUBLISHED_APP_LIMIT = 1u
  *
  * @param dataStore the data store to use for data persistence.
  * @param timestampSource the source of timestamps to use.
+ * @param adminExternalUserId the external identity of the sole administrator user.
  */
 class ConsoleApiImpl(
     private val dataStore: DataStore,
     private val timestampSource: TimestampSource,
+    private val adminExternalUserId: ExternalUserId,
 ) : ConsoleApi {
     override suspend fun getMyOrganization(
         context: CallContext,
@@ -78,5 +86,27 @@ class ConsoleApiImpl(
                 activeAppDraftCount = organization.activeAppDraftCount,
             ),
         )
+    }
+
+    override suspend fun getSelf(
+        context: CallContext,
+    ): Either<GetSelfError, GetSelfResponse> = either {
+        val currentTime = timestampSource.now()
+        val user = dataStore.runInTransaction { tx ->
+            val userId = authenticateCaller(tx, context.sessionId, currentTime)
+
+            val roles = tx.findUserIdByExternalUserId(adminExternalUserId)
+                .bindMapLeft(::toServerError)
+                // The user has the reviewer and publisher roles iff they're the administrator
+                .filter { adminUserId -> userId == adminUserId }
+                .map { setOf(UserRole.REVIEWER, UserRole.PUBLISHER) }
+                .getOrElse(::emptySet)
+
+            User(userId, roles)
+        }
+            .bindMapLeft(::toServerError)
+            .bind()
+
+        GetSelfResponse(user)
     }
 }

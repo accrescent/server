@@ -6,6 +6,7 @@ package app.accrescent.server.adapters.driving.api.console.grpc
 
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
+import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
 import app.accrescent.server.domain.ports.driving.api.console2.ServerError
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
@@ -36,6 +37,16 @@ class ErrorConvertersTest {
     }
 
     @ParameterizedTest
+    @MethodSource("toStatusCorrectlyConvertsGetSelfErrorTestCases")
+    fun `toStatus correctly converts GetSelfError`(
+        testCase: ToStatusCorrectlyConvertsGetSelfErrorTestCase,
+    ) {
+        val status = toStatus(testCase.error)
+
+        assertEquals(testCase.expectedCode, status.code)
+    }
+
+    @ParameterizedTest
     @MethodSource("toStatusCorrectlyConvertsServerErrorTestCases")
     fun `toStatus correctly converts ServerError`(
         testCase: ToStatusCorrectlyConvertsServerErrorTestCase,
@@ -53,6 +64,11 @@ class ErrorConvertersTest {
 
         data class ToStatusCorrectlyConvertsGetOrganizationErrorTestCase(
             val error: GetOrganizationError,
+            val expectedCode: Status.Code,
+        )
+
+        data class ToStatusCorrectlyConvertsGetSelfErrorTestCase(
+            val error: GetSelfError,
             val expectedCode: Status.Code,
         )
 
@@ -83,6 +99,17 @@ class ErrorConvertersTest {
                 ToStatusCorrectlyConvertsGetOrganizationErrorTestCase(
                     InsufficientPermissionError(),
                     Status.Code.PERMISSION_DENIED,
+                ),
+            )
+        }
+
+        @JvmStatic
+        private fun toStatusCorrectlyConvertsGetSelfErrorTestCases():
+                List<ToStatusCorrectlyConvertsGetSelfErrorTestCase> {
+            return listOf(
+                ToStatusCorrectlyConvertsGetSelfErrorTestCase(
+                    UnauthenticatedError(),
+                    Status.Code.UNAUTHENTICATED,
                 ),
             )
         }

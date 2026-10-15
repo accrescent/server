@@ -75,7 +75,7 @@ private fun createServer(
         .addInterceptedService(AppServiceImpl(context))
         .addInterceptedService(OrganizationServiceImpl(context, consoleApi))
         .addInterceptedService(ReviewServiceImpl(context))
-        .addInterceptedService(UserServiceImpl(context))
+        .addInterceptedService(UserServiceImpl(context, consoleApi))
 
     return server
 }

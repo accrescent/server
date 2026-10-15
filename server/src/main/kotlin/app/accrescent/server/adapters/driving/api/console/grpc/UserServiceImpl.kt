@@ -4,9 +4,31 @@
 
 package app.accrescent.server.adapters.driving.api.console.grpc
 
+import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
+import arrow.core.getOrElse
+import build.buf.gen.accrescent.console.v1.GetSelfRequest
 import build.buf.gen.accrescent.console.v1.UserServiceGrpcKt
 import kotlin.coroutines.CoroutineContext
+import build.buf.gen.accrescent.console.v1.GetSelfResponse as GetSelfResponseProto
 
+/**
+ * gRPC implementation of the console API's `UserService`.
+ *
+ * Calls expect to be intercepted by [CallContextInterceptor].
+ *
+ * @param context the coroutine context to run method implementations in.
+ * @param consoleApi the console API to serve.
+ */
 class UserServiceImpl(
     context: CoroutineContext,
-) : UserServiceGrpcKt.UserServiceCoroutineImplBase(context)
+    private val consoleApi: ConsoleApi,
+) : UserServiceGrpcKt.UserServiceCoroutineImplBase(context) {
+    override suspend fun getSelf(request: GetSelfRequest): GetSelfResponseProto {
+        val context = CallContextInterceptor.CALL_CONTEXT_KEY.get()
+
+        return consoleApi.getSelf(context)
+            .mapLeft(::toStatus)
+            .getOrElse { throw it.asRuntimeException() }
+            .let(::toProto)
+    }
+}

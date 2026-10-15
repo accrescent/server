@@ -79,21 +79,18 @@ sealed class DataStoreConfig {
     /**
      * Configuration for a data store backed by a PostgreSQL database.
      *
-     * @property endpoint the endpoint of the PostgreSQL server.
+     * @property endpoint the endpoint of the PostgreSQL server and the means of authenticating to
+     * it.
      * @property database the name of the database to connect to.
-     * @property user the name of the user to authenticate with.
-     * @property password the password of the user to authenticate with.
      */
     data class Postgresql(
         val endpoint: PostgresqlEndpoint,
         val database: NonEmptyString,
-        val user: NonEmptyString,
-        val password: NonEmptyString,
     ) : DataStoreConfig()
 }
 
 /**
- * The endpoint of a PostgreSQL server.
+ * The endpoint of a PostgreSQL server and the means of authenticating to it.
  */
 sealed class PostgresqlEndpoint {
     /**
@@ -101,8 +98,13 @@ sealed class PostgresqlEndpoint {
      *
      * @property host the host name or IP address of the PostgreSQL server.
      * @property port the port of the PostgreSQL server.
+     * @property credentials the credentials to authenticate with.
      */
-    data class Direct(val host: NonEmptyString, val port: TcpPort) : PostgresqlEndpoint()
+    data class Direct(
+        val host: NonEmptyString,
+        val port: TcpPort,
+        val credentials: PostgresqlPasswordCredentials,
+    ) : PostgresqlEndpoint()
 
     /**
      * A Cloud SQL for PostgreSQL instance connected to via the
@@ -110,6 +112,42 @@ sealed class PostgresqlEndpoint {
      *
      * @property connectionName the instance connection name of the form
      * `<project>:<region>:<instance>`.
+     * @property authn the means of authenticating to the instance.
      */
-    data class CloudSqlInstance(val connectionName: NonEmptyString) : PostgresqlEndpoint()
+    data class CloudSqlInstance(
+        val connectionName: NonEmptyString,
+        val authn: CloudSqlAuthn,
+    ) : PostgresqlEndpoint()
 }
+
+/**
+ * A means of authenticating to a Cloud SQL instance.
+ */
+sealed class CloudSqlAuthn {
+    /**
+     * Built-in database authentication with a password.
+     *
+     * @property credentials the credentials to authenticate with.
+     */
+    data class Password(val credentials: PostgresqlPasswordCredentials) : CloudSqlAuthn()
+
+    /**
+     * [IAM database authentication](https://docs.cloud.google.com/sql/docs/postgres/iam-authentication).
+     *
+     * Authentication occurs via
+     * [Application Default Credentials](https://docs.cloud.google.com/docs/authentication/application-default-credentials).
+     *
+     * @property user the username of the IAM user to authenticate as. For a user account, this is
+     * the account's email address. For a service account, this is the service account's email
+     * address with the `.gserviceaccount.com` suffix removed (e.g., `my-sa@my-project.iam`).
+     */
+    data class Iam(val user: NonEmptyString) : CloudSqlAuthn()
+}
+
+/**
+ * Credentials for PostgreSQL built-in password authentication.
+ *
+ * @property user the name of the PostgreSQL user to authenticate as.
+ * @property password the password of [user].
+ */
+data class PostgresqlPasswordCredentials(val user: NonEmptyString, val password: NonEmptyString)

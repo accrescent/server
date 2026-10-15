@@ -11,9 +11,11 @@ import app.accrescent.server.core.causedBy
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.config.ApplicationConfig
 import app.accrescent.server.domain.config.AuthnConfig
+import app.accrescent.server.domain.config.CloudSqlAuthn
 import app.accrescent.server.domain.config.DataStoreConfig
 import app.accrescent.server.domain.config.GithubAuthnConfig
 import app.accrescent.server.domain.config.PostgresqlEndpoint
+import app.accrescent.server.domain.config.PostgresqlPasswordCredentials
 import app.accrescent.server.domain.config.ServerConfig
 import app.accrescent.server.domain.config.SessionConfig
 import app.accrescent.server.domain.config.SessionLifetime
@@ -50,7 +52,10 @@ private const val DATASTORE_PORT_PROPERTY = "datastore.port"
 private const val DATASTORE_DATABASE_PROPERTY = "datastore.database"
 private const val DATASTORE_USER_PROPERTY = "datastore.user"
 private const val DATASTORE_PASSWORD_PROPERTY = "datastore.password"
-private const val DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY = "datastore.cloud-sql-instance"
+private const val DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY = "datastore.cloud-sql.instance"
+private const val DATASTORE_CLOUD_SQL_IAM_AUTHN_PROPERTY = "datastore.cloud-sql.iam-authn"
+
+private const val DEFAULT_DATASTORE_CLOUD_SQL_IAM_AUTHN = false
 
 /**
  * A configuration loader which loads via
@@ -155,13 +160,6 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
                     NON_EMPTY_STRING_CONVERTER,
                 )
                     .getOrElse { DEFAULT_POSTGRESQL_DATABASE },
-                user = loadOptionalProperty(config, DATASTORE_USER_PROPERTY, NON_EMPTY_STRING_CONVERTER)
-                    .getOrElse { DEFAULT_POSTGRESQL_USER },
-                password = loadProperty(
-                    config,
-                    DATASTORE_PASSWORD_PROPERTY,
-                    NON_EMPTY_STRING_CONVERTER,
-                ),
             )
         }
     }
@@ -170,7 +168,8 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
      * Loads the PostgreSQL endpoint configuration.
      *
      * If [DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY] is set, the endpoint is that Cloud SQL instance
-     * and [DATASTORE_HOST_PROPERTY] and [DATASTORE_PORT_PROPERTY] must not be set.
+     * and [DATASTORE_HOST_PROPERTY] and [DATASTORE_PORT_PROPERTY] must not be set. Otherwise,
+     * [DATASTORE_CLOUD_SQL_IAM_AUTHN_PROPERTY] must not be set.
      */
     context(_: Raise<ConfigLoadError>)
     private fun loadPostgresqlEndpoint(config: SmallRyeConfig): PostgresqlEndpoint {
@@ -180,19 +179,72 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
             NON_EMPTY_STRING_CONVERTER,
         )
         return when (cloudSqlInstance) {
-            None -> PostgresqlEndpoint.Direct(
-                host = loadProperty(config, DATASTORE_HOST_PROPERTY, NON_EMPTY_STRING_CONVERTER),
-                port = loadOptionalProperty(config, DATASTORE_PORT_PROPERTY, TCP_PORT_CONVERTER)
-                    .getOrElse { DEFAULT_DATASTORE_PORT },
-            )
+            None -> {
+                val host = loadProperty(config, DATASTORE_HOST_PROPERTY, NON_EMPTY_STRING_CONVERTER)
+                ensureUnset(
+                    config,
+                    DATASTORE_CLOUD_SQL_IAM_AUTHN_PROPERTY,
+                    DATASTORE_HOST_PROPERTY,
+                    None,
+                )
+
+                PostgresqlEndpoint.Direct(
+                    host = host,
+                    port = loadOptionalProperty(config, DATASTORE_PORT_PROPERTY, TCP_PORT_CONVERTER)
+                        .getOrElse { DEFAULT_DATASTORE_PORT },
+                    credentials = loadPasswordCredentials(config),
+                )
+            }
 
             is Some -> {
                 for (name in listOf(DATASTORE_HOST_PROPERTY, DATASTORE_PORT_PROPERTY)) {
                     ensureUnset(config, name, DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY, None)
                 }
-                PostgresqlEndpoint.CloudSqlInstance(cloudSqlInstance.value)
+                PostgresqlEndpoint.CloudSqlInstance(
+                    connectionName = cloudSqlInstance.value,
+                    authn = loadCloudSqlAuthn(config),
+                )
             }
         }
+    }
+
+    /**
+     * Loads the Cloud SQL authentication configuration.
+     *
+     * If [DATASTORE_CLOUD_SQL_IAM_AUTHN_PROPERTY] is `true`, [DATASTORE_PASSWORD_PROPERTY] must not
+     * be set.
+     */
+    context(_: Raise<ConfigLoadError>)
+    private fun loadCloudSqlAuthn(config: SmallRyeConfig): CloudSqlAuthn {
+        val iamAuthn = loadOptionalProperty(
+            config,
+            DATASTORE_CLOUD_SQL_IAM_AUTHN_PROPERTY,
+            BOOLEAN_CONVERTER,
+        )
+            .getOrElse { DEFAULT_DATASTORE_CLOUD_SQL_IAM_AUTHN }
+
+        return if (iamAuthn) {
+            ensureUnset(
+                config,
+                DATASTORE_PASSWORD_PROPERTY,
+                DATASTORE_CLOUD_SQL_IAM_AUTHN_PROPERTY,
+                Some(true.toString()),
+            )
+            CloudSqlAuthn.Iam(
+                user = loadProperty(config, DATASTORE_USER_PROPERTY, NON_EMPTY_STRING_CONVERTER),
+            )
+        } else {
+            CloudSqlAuthn.Password(loadPasswordCredentials(config))
+        }
+    }
+
+    context(_: Raise<ConfigLoadError>)
+    private fun loadPasswordCredentials(config: SmallRyeConfig): PostgresqlPasswordCredentials {
+        return PostgresqlPasswordCredentials(
+            user = loadOptionalProperty(config, DATASTORE_USER_PROPERTY, NON_EMPTY_STRING_CONVERTER)
+                .getOrElse { DEFAULT_POSTGRESQL_USER },
+            password = loadProperty(config, DATASTORE_PASSWORD_PROPERTY, NON_EMPTY_STRING_CONVERTER),
+        )
     }
 
     context(raise: Raise<ConfigLoadError>)
@@ -245,6 +297,7 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
             DATASTORE_USER_PROPERTY,
             DATASTORE_PASSWORD_PROPERTY,
             DATASTORE_CLOUD_SQL_INSTANCE_PROPERTY,
+            DATASTORE_CLOUD_SQL_IAM_AUTHN_PROPERTY,
         )
 
         private val INET_ADDRESS_LITERAL_CONVERTER =
@@ -272,6 +325,10 @@ class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) :
                     "\"$value\" is not an integer in the range [1, 8760] followed by an \"h\" " +
                             "(e.g. \"336h\")"
                 )
+        }
+        private val BOOLEAN_CONVERTER = Converters.newEmptyValueConverter { value ->
+            value.toBooleanStrictOrNull()
+                ?: throw IllegalArgumentException("\"$value\" is not \"true\" or \"false\"")
         }
         private val NON_EMPTY_STRING_CONVERTER = Converters.newEmptyValueConverter { value ->
             NonEmptyString.fromString(value)

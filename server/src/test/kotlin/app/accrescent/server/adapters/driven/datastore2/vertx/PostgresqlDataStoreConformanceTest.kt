@@ -10,6 +10,7 @@ import app.accrescent.server.core.TcpPort
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.config.DataStoreConfig
 import app.accrescent.server.domain.config.PostgresqlEndpoint
+import app.accrescent.server.domain.config.PostgresqlPasswordCredentials
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreConformanceTest
 import io.vertx.core.Vertx
@@ -26,10 +27,12 @@ class PostgresqlDataStoreConformanceTest : DataStoreConformanceTest() {
                     host = NonEmptyString.fromString(database.host).unwrap(),
                     // Convert via a string so that out-of-range ports throw rather than truncate
                     port = TcpPort.new(database.port.toString().toUShort()).unwrap(),
+                    credentials = PostgresqlPasswordCredentials(
+                        user = NonEmptyString.fromString(database.username).unwrap(),
+                        password = NonEmptyString.fromString(database.password).unwrap(),
+                    ),
                 ),
                 database = NonEmptyString.fromString(database.name).unwrap(),
-                user = NonEmptyString.fromString(database.username).unwrap(),
-                password = NonEmptyString.fromString(database.password).unwrap(),
             )
             val dataStore = PostgresqlDataStore(vertx, config)
 

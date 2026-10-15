@@ -79,17 +79,37 @@ sealed class DataStoreConfig {
     /**
      * Configuration for a data store backed by a PostgreSQL database.
      *
-     * @property host the host name or IP address of the PostgreSQL server.
-     * @property port the port of the PostgreSQL server.
+     * @property endpoint the endpoint of the PostgreSQL server.
      * @property database the name of the database to connect to.
      * @property user the name of the user to authenticate with.
      * @property password the password of the user to authenticate with.
      */
     data class Postgresql(
-        val host: NonEmptyString,
-        val port: TcpPort,
+        val endpoint: PostgresqlEndpoint,
         val database: NonEmptyString,
         val user: NonEmptyString,
         val password: NonEmptyString,
     ) : DataStoreConfig()
+}
+
+/**
+ * The endpoint of a PostgreSQL server.
+ */
+sealed class PostgresqlEndpoint {
+    /**
+     * A PostgreSQL server connected to directly by its address.
+     *
+     * @property host the host name or IP address of the PostgreSQL server.
+     * @property port the port of the PostgreSQL server.
+     */
+    data class Direct(val host: NonEmptyString, val port: TcpPort) : PostgresqlEndpoint()
+
+    /**
+     * A Cloud SQL for PostgreSQL instance connected to via the
+     * [Cloud SQL Java Connector](https://docs.cloud.google.com/sql/docs/postgres/connect-connectors#java).
+     *
+     * @property connectionName the instance connection name of the form
+     * `<project>:<region>:<instance>`.
+     */
+    data class CloudSqlInstance(val connectionName: NonEmptyString) : PostgresqlEndpoint()
 }

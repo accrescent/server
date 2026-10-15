@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.arrow.core)
     implementation(libs.binary.resources)
     implementation(libs.bundletool)
+    runtimeOnly(libs.cloud.sql.postgres.socket.factory)
     implementation(libs.console.api.grpc.kotlin)
     implementation(libs.flyway.database.postgresql)
     implementation(libs.google.cloud.secretmanager)

@@ -9,6 +9,7 @@ appstore-api = "1.5.0.4.20260925233938.cd9cbc3ac813"
 arrow = "2.2.3"
 binary-resources = "32.4.1"
 bundletool = "1.18.3"
+cloud-sql-connector = "1.30.1"
 compress = "1.28.0"
 console-api = "1.5.0.4.20261013012849.3d5dec566594"
 detekt = "2.0.0-alpha.6"
@@ -36,6 +37,7 @@ appstore-api-grpc-kotlin = { module = "build.buf.gen:accrescent_appstore-api_grp
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 binary-resources = { module = "com.android.tools.apkparser:binary-resources", version.ref = "binary-resources" }
 bundletool = { module = "com.android.tools.build:bundletool", version.ref = "bundletool" }
+cloud-sql-postgres-socket-factory = { module = "com.google.cloud.sql:postgres-socket-factory", version.ref = "cloud-sql-connector" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "compress" }
 console-api-grpc-kotlin = { module = "build.buf.gen:accrescent_console-api_grpc_kotlin", version.ref = "console-api" }
 detekt-api = { module = "dev.detekt:detekt-api", version.ref = "detekt" }

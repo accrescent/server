@@ -11,7 +11,8 @@ import app.accrescent.server.domain.crypto.Sha256Hash
 import app.accrescent.server.domain.ports.driven.randomsource.RandomSource
 import app.accrescent.server.domain.ports.driven.randomsource.RandomSourceResult
 import app.accrescent.server.domain.ports.driving.api.authn.AuthenticationApi
-import app.accrescent.server.domain.ports.driving.api.authn.CreateSessionError
+import app.accrescent.server.domain.ports.driving.api.authn.ServerError
+import app.accrescent.server.domain.ports.driving.api.authn.UnauthenticatedError
 import arrow.core.Some
 import arrow.core.getOrElse
 import arrow.core.raise.either
@@ -57,6 +58,7 @@ private const val COOKIE_NAME_PREFIX = "__Host-Http-"
  * The name of the cookie [AuthnServer] stores authenticated session IDs in.
  */
 const val SESSION_COOKIE_NAME = "${COOKIE_NAME_PREFIX}session"
+private const val SESSION_PATH = "${AUTHN_PATH_PREFIX}session"
 private const val POST_LOGIN_REDIRECT_PATH = "/"
 private const val LOGIN_CANCELED_REDIRECT_PATH = "/"
 
@@ -89,10 +91,12 @@ private const val GITHUB_HTTP_CLIENT_NAME = "github"
  * GitHub authentication is provided via the OAuth 2.0 authorization code with PKCE. No scopes are
  * requested.
  *
+ * Users log out by sending a DELETE request to the session endpoint.
+ *
  * @param vertx the Vert.x instance to make requests to GitHub with.
  * @param context the coroutine context to run requests in.
  * @param authnConfig the user authentication config to use.
- * @param authenticationApi the authentication API to create sessions with.
+ * @param authenticationApi the authentication API manage sessions with.
  * @param randomSource the source of OAuth 2.0 states and PKCE code verifiers.
  * @param githubSite the GitHub login URL. Defaults to "https://github.com/login".
  * @param githubUserInfoPath the GitHub user info URL. Defaults to "https://api.github.com/user".
@@ -131,20 +135,26 @@ class AuthnServer(
         // Responses set and clear credentials, so they must never be cached
         response.putHeader(HttpHeaders.CACHE_CONTROL, "no-store")
 
-        if (request.method() != HttpMethod.GET) {
+        val path: String? = request.path()
+        val (allowedMethod, handler) = when (path) {
+            GITHUB_LOGIN_PATH -> HttpMethod.GET to ::startGithubLogin
+            GITHUB_CALLBACK_PATH -> HttpMethod.GET to ::finishGithubLogin
+            SESSION_PATH -> HttpMethod.DELETE to ::logOut
+            else -> {
+                response.setStatusCode(HttpResponseStatus.NOT_FOUND.code()).end()
+                return
+            }
+        }
+
+        if (request.method() != allowedMethod) {
             response
                 .setStatusCode(HttpResponseStatus.METHOD_NOT_ALLOWED.code())
-                .putHeader(HttpHeaders.ALLOW, HttpMethod.GET.name())
+                .putHeader(HttpHeaders.ALLOW, allowedMethod.name())
                 .end()
             return
         }
 
-        val path: String? = request.path()
-        when (path) {
-            GITHUB_LOGIN_PATH -> startGithubLogin(request)
-            GITHUB_CALLBACK_PATH -> finishGithubLogin(request)
-            else -> response.setStatusCode(HttpResponseStatus.NOT_FOUND.code()).end()
-        }
+        handler(request)
     }
 
     private fun startGithubLogin(request: HttpServerRequest) {
@@ -252,6 +262,34 @@ class AuthnServer(
         )
     }
 
+    private fun logOut(request: HttpServerRequest) {
+        val response = request.response()
+
+        val sessionId = request.cookies(SESSION_COOKIE_NAME).singleOrNone().map(Cookie::getValue)
+
+        scope.launch {
+            val status = authenticationApi.logOut(sessionId).fold(
+                {
+                    when (it) {
+                        is UnauthenticatedError -> HttpResponseStatus.UNAUTHORIZED
+                        is ServerError -> {
+                            logger.error("Failed to log out: {}", it)
+                            // The session may still be valid, so keep the session cookie so that
+                            // the client retains the ability to invalidate it
+                            response.setStatusCode(toHttpStatus(it).code()).end()
+                            return@launch
+                        }
+                    }
+                },
+                { HttpResponseStatus.NO_CONTENT },
+            )
+
+            // The session is no longer valid if it ever was, so delete the session cookie since the
+            // client has no reason to keep it anymore
+            response.addSetCookie(expiredSessionCookie()).setStatusCode(status.code()).end()
+        }
+    }
+
     private suspend fun completeGithubLogin(response: HttpServerResponse, userInfo: JsonObject) {
         // GitHub user IDs are Longs (see ExternalUserId.Github). We use getValue() instead of
         // getLong() here since getLong() silently converts doubles, wraps around BigIntegers, etc.
@@ -268,8 +306,7 @@ class AuthnServer(
         val session = authenticationApi.createSession(ExternalUserId.Github(userId)).getOrElse {
             logger.error("Failed to create session: {}", it)
             val status = when (it) {
-                is CreateSessionError.InternalServerError -> HttpResponseStatus.INTERNAL_SERVER_ERROR
-                is CreateSessionError.ServiceUnavailableError -> HttpResponseStatus.SERVICE_UNAVAILABLE
+                is ServerError -> toHttpStatus(it)
             }
             response.setStatusCode(status.code()).end()
             return
@@ -318,6 +355,19 @@ private fun sessionCookie(sessionId: String, lifetime: SessionLifetime): Cookie 
     return hostHttpCookie(SESSION_COOKIE_NAME, sessionId)
         .setSameSite(CookieSameSite.STRICT)
         .setMaxAge(lifetime.value.inWholeSeconds)
+}
+
+private fun expiredSessionCookie(): Cookie {
+    return hostHttpCookie(SESSION_COOKIE_NAME, "")
+        .setSameSite(CookieSameSite.STRICT)
+        .setMaxAge(0)
+}
+
+private fun toHttpStatus(error: ServerError): HttpResponseStatus {
+    return when (error) {
+        is ServerError.InternalServerError -> HttpResponseStatus.INTERNAL_SERVER_ERROR
+        is ServerError.ServiceUnavailableError -> HttpResponseStatus.SERVICE_UNAVAILABLE
+    }
 }
 
 /**

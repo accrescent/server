@@ -194,6 +194,16 @@ private class PostgresqlTransaction(
         )
     }
 
+    override suspend fun deleteActiveSession(
+        idHash: Sha256Hash,
+        currentTime: OffsetDateTime,
+    ): DataStoreResult<Boolean> = either {
+        connection.executeOptionalUpdate(
+            "DELETE FROM sessions WHERE id_hash = ? AND expire_time > ?",
+            Tuple.of(idHash.digest().copyToByteArray(), currentTime),
+        )
+    }
+
     override suspend fun findOrgApiViewById(
         organizationId: String,
     ): DataStoreResult<Option<OrgApiView>> = either {
@@ -286,6 +296,20 @@ private suspend fun SqlConnection.executeOptionalQuery(sql: String, params: Tupl
 context(_: Raise<DataStoreError>)
 private suspend fun SqlConnection.executeSingleQuery(sql: String, params: Tuple): Row {
     return executeSingleQuery(sql, params, Throwable::toDataStoreError)
+}
+
+/**
+ * Executes a query which should affect at most one row.
+ *
+ * Shorthand for [executeOptionalUpdate] using PostgreSQL's error mapping.
+ *
+ * @param sql the SQL statement to execute.
+ * @param params the statement's parameters.
+ * @return whether the statement affected a row.
+ */
+context(_: Raise<DataStoreError>)
+private suspend fun SqlConnection.executeOptionalUpdate(sql: String, params: Tuple): Boolean {
+    return executeOptionalUpdate(sql, params, Throwable::toDataStoreError)
 }
 
 /**

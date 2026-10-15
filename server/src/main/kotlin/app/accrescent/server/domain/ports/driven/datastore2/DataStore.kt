@@ -145,6 +145,18 @@ interface DataStore {
         ): DataStoreResult<Unit>
 
         /**
+         * Deletes a login session if the session is active.
+         *
+         * @param idHash the SHA-256 hash of the ID of the session to delete.
+         * @param currentTime the current timestamp to be used for checking session expiration.
+         * @return whether an active session was deleted.
+         */
+        abstract suspend fun deleteActiveSession(
+            idHash: Sha256Hash,
+            currentTime: OffsetDateTime,
+        ): DataStoreResult<Boolean>
+
+        /**
          * Finds the API view of an organization.
          *
          * @param organizationId the ID of the organization to find.

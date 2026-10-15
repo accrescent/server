@@ -72,6 +72,34 @@ suspend fun SqlConnection.executeSingleQuery(
 }
 
 /**
+ * Executes a query which should affect at most one row.
+ *
+ * Raises [DataStoreError.IllegalState] if any number of rows are affected other than zero or one.
+ *
+ * @param sql the SQL statement to execute.
+ * @param params the statement's parameters.
+ * @param mapError converter from exceptions thrown during execution to [DataStoreError].
+ * @return whether the statement affected a row.
+ */
+context(raise: Raise<DataStoreError>)
+suspend fun SqlConnection.executeOptionalUpdate(
+    sql: String,
+    params: Tuple,
+    mapError: (Throwable) -> DataStoreError,
+): Boolean {
+    val rows = catch({ preparedQuery(sql).execute(params).coAwait() }) {
+        raise.raise(mapError(it))
+    }
+    if (rows.rowCount() != 0 && rows.rowCount() != 1) {
+        raise.raise(
+            DataStoreError.IllegalState().causedBy(UnexpectedRowCount("0 or 1", rows.rowCount()))
+        )
+    }
+
+    return rows.rowCount() == 1
+}
+
+/**
  * Executes a query which should affect exactly one row.
  *
  * Raises [DataStoreError.IllegalState] if the statement affects any other number of rows.
@@ -90,17 +118,19 @@ suspend fun SqlConnection.executeSingleUpdate(
         raise.raise(mapError(it))
     }
     if (rows.rowCount() != 1) {
-        raise.raise(DataStoreError.IllegalState().causedBy(UnexpectedRowCount(1, rows.rowCount())))
+        raise.raise(
+            DataStoreError.IllegalState().causedBy(UnexpectedRowCount("1", rows.rowCount()))
+        )
     }
 }
 
 /**
  * A statement affected a different number of rows than expected.
  *
- * @param expected the number of rows the statement was expected to affect.
+ * @param expected a description of the number of rows the statement was expected to affect.
  * @param actual the number of rows the statement actually affected.
  */
-private class UnexpectedRowCount(expected: Int, actual: Int) : Error() {
+private class UnexpectedRowCount(expected: String, actual: Int) : Error() {
     override val message = "expected statement to affect $expected rows, but it affected $actual"
 }
 

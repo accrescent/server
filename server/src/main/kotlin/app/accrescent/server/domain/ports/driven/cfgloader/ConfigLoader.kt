@@ -42,6 +42,23 @@ sealed class ConfigLoadError : Error() {
     }
 
     /**
+     * A set config property is incompatible with another set config property.
+     *
+     * @property name the name of the incompatible config property.
+     * @property conflictingName the name of the config property whose value [name] is incompatible
+     * with.
+     * @property conflictingValue the value of [conflictingName] which [name] is incompatible with.
+     */
+    class IncompatibleProperty(
+        val name: String,
+        val conflictingName: String,
+        val conflictingValue: String,
+    ) : ConfigLoadError() {
+        override val message = "configuration property \"$name\" is incompatible with " +
+                "$conflictingName=$conflictingValue"
+    }
+
+    /**
      * A secret referenced by a config property's value couldn't be accessed.
      *
      * @property name the name of the config property whose value references the secret.

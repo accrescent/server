@@ -5,6 +5,7 @@
 package app.accrescent.server.adapters.driven.datastore2.vertx
 
 import app.accrescent.server.core.NonEmptyString
+import app.accrescent.server.core.NonNegativeLong
 import app.accrescent.server.core.ThrowableError
 import app.accrescent.server.core.causedBy
 import app.accrescent.server.core.unwrap
@@ -215,8 +216,8 @@ private class PostgresqlTransaction(
                 // Apps and app drafts aren't stored yet, so organizations never have any
                 OrgApiView(
                     id = it.requireValue<String>(0),
-                    publishedAppCount = 0u,
-                    activeAppDraftCount = 0u,
+                    publishedAppCount = NonNegativeLong.MIN_VALUE,
+                    activeAppDraftCount = NonNegativeLong.MIN_VALUE,
                 )
             }
     }

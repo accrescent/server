@@ -34,10 +34,10 @@ fun toProto(response: GetOrganizationResponse): GetOrganizationResponseProto {
     return getOrganizationResponse {
         organization = organization {
             id = response.organization.id
-            publishedAppLimit = response.organization.publishedAppLimit.toInt()
-            publishedAppCount = response.organization.publishedAppCount.toInt()
-            activeAppDraftLimit = response.organization.activeAppDraftLimit.toInt()
-            activeAppDraftCount = response.organization.activeAppDraftCount.toInt()
+            publishedAppLimit = response.organization.publishedAppLimit.value
+            publishedAppCount = response.organization.publishedAppCount.value
+            activeAppDraftLimit = response.organization.activeAppDraftLimit.value
+            activeAppDraftCount = response.organization.activeAppDraftCount.value
         }
     }
 }

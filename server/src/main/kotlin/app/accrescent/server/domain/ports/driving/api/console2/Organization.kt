@@ -4,6 +4,8 @@
 
 package app.accrescent.server.domain.ports.driving.api.console2
 
+import app.accrescent.server.core.NonNegativeLong
+
 /**
  * An organization of users.
  *
@@ -17,8 +19,8 @@ package app.accrescent.server.domain.ports.driving.api.console2
  */
 data class Organization(
     val id: String,
-    val publishedAppLimit: UInt,
-    val publishedAppCount: UInt,
-    val activeAppDraftLimit: UInt,
-    val activeAppDraftCount: UInt,
+    val publishedAppLimit: NonNegativeLong,
+    val publishedAppCount: NonNegativeLong,
+    val activeAppDraftLimit: NonNegativeLong,
+    val activeAppDraftCount: NonNegativeLong,
 )

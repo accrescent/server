@@ -4,7 +4,9 @@
 
 package app.accrescent.server.domain.api.console2
 
+import app.accrescent.server.core.NonNegativeLong
 import app.accrescent.server.core.bindMapLeft
+import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.HasPermissionRequest
@@ -26,9 +28,6 @@ import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.raise.ensure
-
-private const val ACTIVE_APP_DRAFT_LIMIT = 3u
-private const val PUBLISHED_APP_LIMIT = 1u
 
 /**
  * Primary implementation of [ConsoleApi].
@@ -108,5 +107,10 @@ class ConsoleApiImpl(
             .bind()
 
         GetSelfResponse(user)
+    }
+
+    private companion object {
+        private val ACTIVE_APP_DRAFT_LIMIT = NonNegativeLong.new(3).unwrap()
+        private val PUBLISHED_APP_LIMIT = NonNegativeLong.new(1).unwrap()
     }
 }

@@ -8,6 +8,7 @@ import app.accrescent.server.UNIX_EPOCH
 import app.accrescent.server.adapters.driven.datastore2.vertx.MemoryDataStore
 import app.accrescent.server.adapters.driven.randomsource.DeterministicRandomSource
 import app.accrescent.server.adapters.driven.timestampsource.FixedTimestampSource
+import app.accrescent.server.core.NonNegativeLong
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.core.unwrap2
 import app.accrescent.server.core.unwrapErr
@@ -121,10 +122,10 @@ class ConsoleApiImplTest {
                 GetOrganizationResponse(
                     Organization(
                         id = "org_1uMy9o9BqyoxomLjIEbctU",
-                        publishedAppLimit = 1u,
-                        publishedAppCount = 0u,
-                        activeAppDraftLimit = 3u,
-                        activeAppDraftCount = 0u,
+                        publishedAppLimit = NonNegativeLong.new(1).unwrap(),
+                        publishedAppCount = NonNegativeLong.MIN_VALUE,
+                        activeAppDraftLimit = NonNegativeLong.new(3).unwrap(),
+                        activeAppDraftCount = NonNegativeLong.MIN_VALUE,
                     ),
                 ),
                 response.unwrap(),

@@ -16,6 +16,8 @@ import arrow.core.Some
 @JvmInline
 value class NonNegativeLong private constructor(val value: Long) {
     companion object {
+        val MIN_VALUE = NonNegativeLong(0)
+
         fun new(value: Long): Option<NonNegativeLong> {
             return if (value >= 0) {
                 Some(NonNegativeLong(value))

@@ -5,6 +5,7 @@
 package app.accrescent.server.domain.ports.driven.datastore2
 
 import app.accrescent.server.UNIX_EPOCH
+import app.accrescent.server.core.NonNegativeLong
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.core.unwrap2
 import app.accrescent.server.core.unwrapErr
@@ -410,7 +411,10 @@ abstract class DataStoreConformanceTest {
                 .runInTransaction { tx -> tx.findOrgApiViewById("org1").bind() }
                 .unwrap2()
 
-            assertEquals(Some(OrgApiView("org1", 0u, 0u)), organization)
+            assertEquals(
+                Some(OrgApiView("org1", NonNegativeLong.MIN_VALUE, NonNegativeLong.MIN_VALUE)),
+                organization,
+            )
         }
     }
 

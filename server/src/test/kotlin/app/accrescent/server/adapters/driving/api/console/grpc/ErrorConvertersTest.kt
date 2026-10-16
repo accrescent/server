@@ -6,6 +6,7 @@ package app.accrescent.server.adapters.driving.api.console.grpc
 
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
@@ -22,6 +23,16 @@ class ErrorConvertersTest {
     @MethodSource("toStatusCorrectlyConvertsCreateAppDraftErrorTestCases")
     fun `toStatus correctly converts CreateAppDraftError`(
         testCase: ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase,
+    ) {
+        val status = toStatus(testCase.error)
+
+        assertEquals(testCase.expectedCode, status.code)
+    }
+
+    @ParameterizedTest
+    @MethodSource("toStatusCorrectlyConvertsDeleteAppDraftErrorTestCases")
+    fun `toStatus correctly converts DeleteAppDraftError`(
+        testCase: ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase,
     ) {
         val status = toStatus(testCase.error)
 
@@ -74,6 +85,11 @@ class ErrorConvertersTest {
             val expectedCode: Status.Code,
         )
 
+        data class ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
+            val error: DeleteAppDraftError,
+            val expectedCode: Status.Code,
+        )
+
         data class ToStatusCorrectlyConvertsGetMyOrganizationErrorTestCase(
             val error: GetMyOrganizationError,
             val expectedCode: Status.Code,
@@ -109,6 +125,21 @@ class ErrorConvertersTest {
                 ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
                     ActiveAppDraftLimitExceededError(),
                     Status.Code.RESOURCE_EXHAUSTED,
+                ),
+            )
+        }
+
+        @JvmStatic
+        private fun toStatusCorrectlyConvertsDeleteAppDraftErrorTestCases():
+                List<ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase> {
+            return listOf(
+                ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
+                    UnauthenticatedError(),
+                    Status.Code.UNAUTHENTICATED,
+                ),
+                ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
+                    InsufficientPermissionError(),
+                    Status.Code.PERMISSION_DENIED,
                 ),
             )
         }

@@ -22,6 +22,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLim
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
+import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
@@ -81,6 +82,58 @@ class ConsoleApiImplTest {
             val response = consoleApi.createAppDraft(context, request)
 
             assertInstanceOf<ActiveAppDraftLimitExceededError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `deleteAppDraft returns Unauthenticated for unauthenticated request`() {
+        withMigratedDataStore { dataStore ->
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.deleteAppDraft(
+                CallContext(None),
+                DeleteAppDraftRequest("draft_1uMy9o9BqyoxomLjIEbctU"),
+            )
+
+            assertInstanceOf<UnauthenticatedError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `deleteAppDraft returns InsufficientPermission for unauthorized request`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org2", "user2", ExternalUserId.Github(2), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft2", "org2", UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.deleteAppDraft(context, DeleteAppDraftRequest("draft2"))
+
+            assertInstanceOf<InsufficientPermissionError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `deleteAppDraft deletes app draft for authorized request`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val organizationId = "org_1uMy9o9BqyoxomLjIEbctU"
+            val appDraftId = consoleApi
+                .createAppDraft(context, CreateAppDraftRequest(organizationId))
+                .unwrap()
+                .appDraftId
+
+            consoleApi.deleteAppDraft(context, DeleteAppDraftRequest(appDraftId)).unwrap()
+            val response = consoleApi.getOrganization(context, GetOrganizationRequest(organizationId))
+
+            assertEquals(
+                NonNegativeLong.MIN_VALUE,
+                response.unwrap().organization.activeAppDraftCount,
+            )
         }
     }
 

@@ -8,6 +8,7 @@ import app.accrescent.server.core.NonNegativeLong
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
+import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
@@ -17,6 +18,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.User
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
 import build.buf.gen.accrescent.console.v1.createAppDraftRequest
 import build.buf.gen.accrescent.console.v1.createAppDraftResponse
+import build.buf.gen.accrescent.console.v1.deleteAppDraftRequest
 import build.buf.gen.accrescent.console.v1.getMyOrganizationResponse
 import build.buf.gen.accrescent.console.v1.getOrganizationRequest
 import build.buf.gen.accrescent.console.v1.getOrganizationResponse
@@ -32,6 +34,14 @@ class MessageConvertersTest {
     fun `toDomain correctly converts CreateAppDraftRequest`() {
         val proto = createAppDraftRequest { organizationId = "org1" }
         val domain = CreateAppDraftRequest("org1")
+
+        assertEquals(domain, toDomain(proto))
+    }
+
+    @Test
+    fun `toDomain correctly converts DeleteAppDraftRequest`() {
+        val proto = deleteAppDraftRequest { appDraftId = "draft1" }
+        val domain = DeleteAppDraftRequest("draft1")
 
         assertEquals(domain, toDomain(proto))
     }

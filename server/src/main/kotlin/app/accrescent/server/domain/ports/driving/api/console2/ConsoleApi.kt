@@ -22,6 +22,17 @@ interface ConsoleApi {
     ): Either<CreateAppDraftError, CreateAppDraftResponse>
 
     /**
+     * Deletes an app draft.
+     *
+     * @param context the context for this call.
+     * @param request the request parameters.
+     */
+    suspend fun deleteAppDraft(
+        context: CallContext,
+        request: DeleteAppDraftRequest,
+    ): Either<DeleteAppDraftError, Unit>
+
+    /**
      * Gets the organization of the currently authenticated user.
      *
      * @param context the context for this call.

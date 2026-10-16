@@ -6,6 +6,7 @@ package app.accrescent.server.adapters.driving.api.console.grpc
 
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
+import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
@@ -19,6 +20,7 @@ import build.buf.gen.accrescent.console.v1.organization
 import build.buf.gen.accrescent.console.v1.user
 import build.buf.gen.accrescent.console.v1.CreateAppDraftRequest as CreateAppDraftRequestProto
 import build.buf.gen.accrescent.console.v1.CreateAppDraftResponse as CreateAppDraftResponseProto
+import build.buf.gen.accrescent.console.v1.DeleteAppDraftRequest as DeleteAppDraftRequestProto
 import build.buf.gen.accrescent.console.v1.GetMyOrganizationResponse as GetMyOrganizationResponseProto
 import build.buf.gen.accrescent.console.v1.GetOrganizationRequest as GetOrganizationRequestProto
 import build.buf.gen.accrescent.console.v1.GetOrganizationResponse as GetOrganizationResponseProto
@@ -27,6 +29,10 @@ import build.buf.gen.accrescent.console.v1.UserRole as UserRoleProto
 
 fun toDomain(request: CreateAppDraftRequestProto): CreateAppDraftRequest {
     return CreateAppDraftRequest(request.organizationId)
+}
+
+fun toDomain(request: DeleteAppDraftRequestProto): DeleteAppDraftRequest {
+    return DeleteAppDraftRequest(request.appDraftId)
 }
 
 fun toDomain(request: GetOrganizationRequestProto): GetOrganizationRequest {

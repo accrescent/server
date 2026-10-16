@@ -19,6 +19,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
+import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
@@ -81,6 +83,26 @@ class ConsoleApiImpl(
             .bind()
 
         CreateAppDraftResponse(appDraftId)
+    }
+
+    override suspend fun deleteAppDraft(
+        context: CallContext,
+        request: DeleteAppDraftRequest,
+    ): Either<DeleteAppDraftError, Unit> = either {
+        val currentTime = timestampSource.now()
+        dataStore.runInTransaction { tx ->
+            val userId = authenticateCaller(tx, context.sessionId, currentTime)
+
+            val hasPermission = tx
+                .hasPermission(HasPermissionRequest.DeleteAppDraft(request.appDraftId, userId))
+                .bindMapLeft(::toServerError)
+            ensure(hasPermission, ::InsufficientPermissionError)
+
+            // The app draft is guaranteed to exist since permission is granted
+            tx.deleteAppDraft(request.appDraftId).bindMapLeft(::toServerError)
+        }
+            .bindMapLeft(::toServerError)
+            .bind()
     }
 
     override suspend fun getMyOrganization(

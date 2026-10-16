@@ -227,6 +227,10 @@ private class PostgresqlTransaction(
         )
     }
 
+    override suspend fun deleteAppDraft(appDraftId: String): DataStoreResult<Unit> = either {
+        connection.executeSingleUpdate("DELETE FROM app_drafts WHERE id = ?", Tuple.of(appDraftId))
+    }
+
     override suspend fun findOrgApiViewById(
         organizationId: String,
     ): DataStoreResult<Option<OrgApiView>> = either {
@@ -293,6 +297,16 @@ private class PostgresqlTransaction(
             is HasPermissionRequest.CreateAppDraft,
             is HasPermissionRequest.ViewOrganization ->
                 "SELECT EXISTS(SELECT 1 FROM organizations WHERE id = ? AND owner_user_id = ?)"
+
+            is HasPermissionRequest.DeleteAppDraft ->
+                """
+                SELECT EXISTS(
+                    SELECT 1
+                    FROM app_drafts
+                    JOIN organizations ON organizations.id = app_drafts.organization_id
+                    WHERE app_drafts.id = ? AND organizations.owner_user_id = ?
+                )
+                """.trimIndent()
         }
 
         connection

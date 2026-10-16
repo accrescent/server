@@ -464,6 +464,35 @@ abstract class DataStoreConformanceTest {
     }
 
     @Test
+    suspend fun `deleteAppDraft deletes app draft with given ID`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            dataStore.runInTransaction { tx -> tx.deleteAppDraft("draft1").bind() }.unwrap2()
+            val count = dataStore
+                .runInTransaction { tx -> tx.countAppDraftsInOrg("org1").bind() }
+                .unwrap2()
+
+            assertEquals(NonNegativeLong.MIN_VALUE, count)
+        }
+    }
+
+    @Test
+    suspend fun `deleteAppDraft returns EntityNotFound for non-existent app draft`() {
+        withMigratedDataStore { dataStore ->
+            val error = dataStore.runInTransaction { tx -> tx.deleteAppDraft("draft1").bind() }
+                .unwrap()
+                .unwrapErr()
+
+            assertInstanceOf<DataStoreError.EntityNotFound>(error)
+        }
+    }
+
+    @Test
     suspend fun `findOrgApiViewById returns API view of organization with given ID`() {
         withMigratedDataStore { dataStore ->
             dataStore.runInTransaction { tx ->
@@ -642,6 +671,14 @@ abstract class DataStoreConformanceTest {
             ) { tx ->
                 either {
                     tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                }
+            },
+            HasPermissionReturnsTrueWithMinimalRelationships(
+                HasPermissionRequest.DeleteAppDraft("draft1", "user1"),
+            ) { tx ->
+                either {
+                    tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                    tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
                 }
             },
             HasPermissionReturnsTrueWithMinimalRelationships(

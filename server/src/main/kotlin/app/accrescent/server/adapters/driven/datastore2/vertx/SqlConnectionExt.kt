@@ -102,7 +102,8 @@ suspend fun SqlConnection.executeOptionalUpdate(
 /**
  * Executes a query which should affect exactly one row.
  *
- * Raises [DataStoreError.IllegalState] if the statement affects any other number of rows.
+ * Raises [DataStoreError.EntityNotFound] if the statement affects no rows or
+ * [DataStoreError.IllegalState] if it affects more than one row.
  *
  * @param sql the SQL statement to execute.
  * @param params the statement's parameters.
@@ -117,8 +118,13 @@ suspend fun SqlConnection.executeSingleUpdate(
     val rows = catch({ preparedQuery(sql).execute(params).coAwait() }) {
         raise.raise(mapError(it))
     }
-    if (rows.rowCount() != 1) {
-        raise.raise(
+    when (rows.rowCount()) {
+        0 -> raise.raise(
+            DataStoreError.EntityNotFound().causedBy(UnexpectedRowCount("1", rows.rowCount()))
+        )
+
+        1 -> Unit
+        else -> raise.raise(
             DataStoreError.IllegalState().causedBy(UnexpectedRowCount("1", rows.rowCount()))
         )
     }

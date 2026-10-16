@@ -12,6 +12,11 @@ import app.accrescent.server.core.Error
 sealed interface CreateAppDraftError
 
 /**
+ * An error that can occur when deleting an app draft.
+ */
+sealed interface DeleteAppDraftError
+
+/**
  * An error that can occur when getting the authenticated user's organization.
  */
 sealed interface GetMyOrganizationError
@@ -32,6 +37,7 @@ sealed interface GetSelfError
 sealed class ServerError :
     Error(),
     CreateAppDraftError,
+    DeleteAppDraftError,
     GetMyOrganizationError,
     GetOrganizationError,
     GetSelfError {
@@ -60,7 +66,11 @@ class ActiveAppDraftLimitExceededError : Error(), CreateAppDraftError {
 /**
  * The caller does not have sufficient permission to perform the operation.
  */
-class InsufficientPermissionError : Error(), CreateAppDraftError, GetOrganizationError {
+class InsufficientPermissionError :
+    Error(),
+    CreateAppDraftError,
+    DeleteAppDraftError,
+    GetOrganizationError {
     override val message = "insufficient permission"
 }
 
@@ -70,6 +80,7 @@ class InsufficientPermissionError : Error(), CreateAppDraftError, GetOrganizatio
 class UnauthenticatedError :
     Error(),
     CreateAppDraftError,
+    DeleteAppDraftError,
     GetMyOrganizationError,
     GetOrganizationError,
     GetSelfError {

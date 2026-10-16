@@ -8,6 +8,9 @@ import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import arrow.core.getOrElse
 import build.buf.gen.accrescent.console.v1.AppDraftServiceGrpcKt
 import build.buf.gen.accrescent.console.v1.CreateAppDraftRequest
+import build.buf.gen.accrescent.console.v1.DeleteAppDraftRequest
+import build.buf.gen.accrescent.console.v1.DeleteAppDraftResponse
+import build.buf.gen.accrescent.console.v1.deleteAppDraftResponse
 import kotlin.coroutines.CoroutineContext
 import build.buf.gen.accrescent.console.v1.CreateAppDraftResponse as CreateAppDraftResponseProto
 
@@ -32,5 +35,17 @@ class AppDraftServiceImpl(
             .mapLeft(::toStatus)
             .getOrElse { throw it.asRuntimeException() }
             .let(::toProto)
+    }
+
+    override suspend fun deleteAppDraft(
+        request: DeleteAppDraftRequest,
+    ): DeleteAppDraftResponse {
+        val context = CallContextInterceptor.CALL_CONTEXT_KEY.get()
+
+        consoleApi.deleteAppDraft(context, toDomain(request))
+            .mapLeft(::toStatus)
+            .getOrElse { throw it.asRuntimeException() }
+
+        return deleteAppDraftResponse {}
     }
 }

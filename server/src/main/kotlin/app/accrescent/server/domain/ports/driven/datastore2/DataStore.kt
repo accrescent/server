@@ -184,6 +184,14 @@ interface DataStore {
         ): DataStoreResult<Boolean>
 
         /**
+         * Deletes an app draft.
+         *
+         * @param appDraftId the ID of the app draft to delete.
+         * @return [DataStoreError.EntityNotFound] if no app draft with the given ID exists.
+         */
+        abstract suspend fun deleteAppDraft(appDraftId: String): DataStoreResult<Unit>
+
+        /**
          * Finds the API view of an organization.
          *
          * @param organizationId the ID of the organization to find.

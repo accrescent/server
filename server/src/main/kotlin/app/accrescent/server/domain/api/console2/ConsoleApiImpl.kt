@@ -7,12 +7,18 @@ package app.accrescent.server.domain.api.console2
 import app.accrescent.server.core.NonNegativeLong
 import app.accrescent.server.core.bindMapLeft
 import app.accrescent.server.core.unwrap
+import app.accrescent.server.domain.IdGenerator
+import app.accrescent.server.domain.IdType
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.HasPermissionRequest
 import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
+import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
@@ -33,14 +39,50 @@ import arrow.core.raise.ensure
  * Primary implementation of [ConsoleApi].
  *
  * @param dataStore the data store to use for data persistence.
+ * @param idGenerator the generator of resource IDs.
  * @param timestampSource the source of timestamps to use.
  * @param adminExternalUserId the external identity of the sole administrator user.
  */
 class ConsoleApiImpl(
     private val dataStore: DataStore,
+    private val idGenerator: IdGenerator,
     private val timestampSource: TimestampSource,
     private val adminExternalUserId: ExternalUserId,
 ) : ConsoleApi {
+    override suspend fun createAppDraft(
+        context: CallContext,
+        request: CreateAppDraftRequest,
+    ): Either<CreateAppDraftError, CreateAppDraftResponse> = either {
+        val currentTime = timestampSource.now()
+        val appDraftId = dataStore.runInTransaction { tx ->
+            val userId = authenticateCaller(tx, context.sessionId, currentTime)
+
+            val hasPermission = tx
+                .hasPermission(HasPermissionRequest.CreateAppDraft(request.organizationId, userId))
+                .bindMapLeft(::toServerError)
+            ensure(hasPermission, ::InsufficientPermissionError)
+
+            // App drafts can't be reviewed yet, so all of them are active
+            val activeAppDraftCount = tx
+                .countAppDraftsInOrg(request.organizationId)
+                .bindMapLeft(::toServerError)
+            ensure(
+                activeAppDraftCount < ACTIVE_APP_DRAFT_LIMIT,
+                ::ActiveAppDraftLimitExceededError,
+            )
+
+            val appDraftId = idGenerator.generateId(IdType.APP_DRAFT).bindMapLeft(::toServerError)
+            tx
+                .createAppDraft(appDraftId, request.organizationId, currentTime)
+                .bindMapLeft(::toServerError)
+            appDraftId
+        }
+            .bindMapLeft(::toServerError)
+            .bind()
+
+        CreateAppDraftResponse(appDraftId)
+    }
+
     override suspend fun getMyOrganization(
         context: CallContext,
     ): Either<GetMyOrganizationError, GetMyOrganizationResponse> = either {

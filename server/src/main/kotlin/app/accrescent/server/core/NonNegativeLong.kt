@@ -14,7 +14,7 @@ import arrow.core.Some
  * @property value the underlying [Long] representation of this value.
  */
 @JvmInline
-value class NonNegativeLong private constructor(val value: Long) {
+value class NonNegativeLong private constructor(val value: Long) : Comparable<NonNegativeLong> {
     companion object {
         val MIN_VALUE = NonNegativeLong(0)
 
@@ -25,5 +25,9 @@ value class NonNegativeLong private constructor(val value: Long) {
                 None
             }
         }
+    }
+
+    override fun compareTo(other: NonNegativeLong): Int {
+        return value.compareTo(other.value)
     }
 }

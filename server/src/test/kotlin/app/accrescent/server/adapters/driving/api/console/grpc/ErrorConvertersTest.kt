@@ -4,6 +4,8 @@
 
 package app.accrescent.server.adapters.driving.api.console.grpc
 
+import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
@@ -16,6 +18,16 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
 class ErrorConvertersTest {
+    @ParameterizedTest
+    @MethodSource("toStatusCorrectlyConvertsCreateAppDraftErrorTestCases")
+    fun `toStatus correctly converts CreateAppDraftError`(
+        testCase: ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase,
+    ) {
+        val status = toStatus(testCase.error)
+
+        assertEquals(testCase.expectedCode, status.code)
+    }
+
     @ParameterizedTest
     @MethodSource("toStatusCorrectlyConvertsGetMyOrganizationErrorTestCases")
     fun `toStatus correctly converts GetMyOrganizationError`(
@@ -57,6 +69,11 @@ class ErrorConvertersTest {
     }
 
     companion object {
+        data class ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
+            val error: CreateAppDraftError,
+            val expectedCode: Status.Code,
+        )
+
         data class ToStatusCorrectlyConvertsGetMyOrganizationErrorTestCase(
             val error: GetMyOrganizationError,
             val expectedCode: Status.Code,
@@ -76,6 +93,25 @@ class ErrorConvertersTest {
             val error: ServerError,
             val expectedCode: Status.Code,
         )
+
+        @JvmStatic
+        private fun toStatusCorrectlyConvertsCreateAppDraftErrorTestCases():
+                List<ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase> {
+            return listOf(
+                ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
+                    UnauthenticatedError(),
+                    Status.Code.UNAUTHENTICATED,
+                ),
+                ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
+                    InsufficientPermissionError(),
+                    Status.Code.PERMISSION_DENIED,
+                ),
+                ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
+                    ActiveAppDraftLimitExceededError(),
+                    Status.Code.RESOURCE_EXHAUSTED,
+                ),
+            )
+        }
 
         @JvmStatic
         private fun toStatusCorrectlyConvertsGetMyOrganizationErrorTestCases():

@@ -18,8 +18,10 @@ import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.config.SessionLifetime
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
+import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
@@ -38,6 +40,50 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
 
 class ConsoleApiImplTest {
+    @Test
+    suspend fun `createAppDraft returns Unauthenticated for unauthenticated request`() {
+        withMigratedDataStore { dataStore ->
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.createAppDraft(
+                CallContext(None),
+                CreateAppDraftRequest("org_1uMy9o9BqyoxomLjIEbctU"),
+            )
+
+            assertInstanceOf<UnauthenticatedError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraft returns InsufficientPermission for unauthorized request`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org2", "user2", ExternalUserId.Github(2), UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.createAppDraft(context, CreateAppDraftRequest("org2"))
+
+            assertInstanceOf<InsufficientPermissionError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraft returns ActiveAppDraftLimitExceeded when attempting to create more than 3 app drafts in org`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val request = CreateAppDraftRequest("org_1uMy9o9BqyoxomLjIEbctU")
+            repeat(3) { consoleApi.createAppDraft(context, request).unwrap() }
+
+            val response = consoleApi.createAppDraft(context, request)
+
+            assertInstanceOf<ActiveAppDraftLimitExceededError>(response.unwrapErr())
+        }
+    }
+
     @Test
     suspend fun `getMyOrganization returns Unauthenticated when not given a session ID`() {
         withMigratedDataStore { dataStore ->
@@ -134,6 +180,25 @@ class ConsoleApiImplTest {
     }
 
     @Test
+    suspend fun `getOrganization returns organization's accurate active app draft count`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val organizationId = "org_1uMy9o9BqyoxomLjIEbctU"
+            repeat(2) {
+                consoleApi.createAppDraft(context, CreateAppDraftRequest(organizationId)).unwrap()
+            }
+
+            val response = consoleApi.getOrganization(context, GetOrganizationRequest(organizationId))
+
+            assertEquals(
+                NonNegativeLong.new(2).unwrap(),
+                response.unwrap().organization.activeAppDraftCount,
+            )
+        }
+    }
+
+    @Test
     suspend fun `getSelf returns Unauthenticated for unauthenticated request`() {
         withMigratedDataStore { dataStore ->
             val consoleApi = makeConsoleApi(dataStore)
@@ -207,7 +272,12 @@ class ConsoleApiImplTest {
             timestampSource: TimestampSource = FixedTimestampSource(),
             admin: ExternalUserId = ExternalUserId.Github(1),
         ): ConsoleApi {
-            return ConsoleApiImpl(dataStore, timestampSource, admin)
+            return ConsoleApiImpl(
+                dataStore = dataStore,
+                idGenerator = IdGenerator(DeterministicRandomSource()),
+                timestampSource = timestampSource,
+                adminExternalUserId = admin,
+            )
         }
 
         /**

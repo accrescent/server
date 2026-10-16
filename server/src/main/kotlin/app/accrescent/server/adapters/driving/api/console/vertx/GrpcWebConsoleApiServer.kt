@@ -70,7 +70,7 @@ private fun createServer(
 ): GrpcServer {
     val options = grpcServerOptions(GrpcProtocol.WEB, WireFormat.PROTOBUF)
     val server = GrpcIoServer.server(vertx, options)
-        .addInterceptedService(AppDraftServiceImpl(context))
+        .addInterceptedService(AppDraftServiceImpl(context, consoleApi))
         .addInterceptedService(AppEditServiceImpl(context))
         .addInterceptedService(AppServiceImpl(context))
         .addInterceptedService(OrganizationServiceImpl(context, consoleApi))

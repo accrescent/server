@@ -5,6 +5,7 @@
 package app.accrescent.server.domain.api.console2
 
 import app.accrescent.server.core.causedBy
+import app.accrescent.server.domain.IdGenerationError
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreError
 import app.accrescent.server.domain.ports.driving.api.console2.ServerError
 
@@ -25,4 +26,14 @@ fun toServerError(error: DataStoreError): ServerError {
     }
 
     return serverError.causedBy(error)
+}
+
+/**
+ * Converts an [IdGenerationError] into its corresponding [ServerError].
+ *
+ * @param error the ID generation error to convert.
+ * @return the corresponding server error, caused by [error].
+ */
+fun toServerError(error: IdGenerationError): ServerError {
+    return ServerError.InternalServerError().causedBy(error)
 }

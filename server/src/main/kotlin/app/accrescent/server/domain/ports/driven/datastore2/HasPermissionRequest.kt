@@ -12,6 +12,15 @@ package app.accrescent.server.domain.ports.driven.datastore2
  */
 sealed class HasPermissionRequest(val resourceId: String, val subjectId: String) {
     /**
+     * The permission to create app drafts in an organization.
+     *
+     * @param organizationId the ID of the organization to create app drafts in.
+     * @param userId the ID of the user to check the permission of.
+     */
+    data class CreateAppDraft(private val organizationId: String, private val userId: String) :
+        HasPermissionRequest(organizationId, userId)
+
+    /**
      * The permission to view an organization.
      *
      * @param organizationId the ID of the organization to view.

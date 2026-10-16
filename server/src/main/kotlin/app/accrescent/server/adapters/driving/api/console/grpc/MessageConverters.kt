@@ -4,24 +4,39 @@
 
 package app.accrescent.server.adapters.driving.api.console.grpc
 
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfResponse
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
+import build.buf.gen.accrescent.console.v1.createAppDraftResponse
 import build.buf.gen.accrescent.console.v1.getMyOrganizationResponse
 import build.buf.gen.accrescent.console.v1.getOrganizationResponse
 import build.buf.gen.accrescent.console.v1.getSelfResponse
 import build.buf.gen.accrescent.console.v1.organization
 import build.buf.gen.accrescent.console.v1.user
+import build.buf.gen.accrescent.console.v1.CreateAppDraftRequest as CreateAppDraftRequestProto
+import build.buf.gen.accrescent.console.v1.CreateAppDraftResponse as CreateAppDraftResponseProto
 import build.buf.gen.accrescent.console.v1.GetMyOrganizationResponse as GetMyOrganizationResponseProto
 import build.buf.gen.accrescent.console.v1.GetOrganizationRequest as GetOrganizationRequestProto
 import build.buf.gen.accrescent.console.v1.GetOrganizationResponse as GetOrganizationResponseProto
 import build.buf.gen.accrescent.console.v1.GetSelfResponse as GetSelfResponseProto
 import build.buf.gen.accrescent.console.v1.UserRole as UserRoleProto
 
+fun toDomain(request: CreateAppDraftRequestProto): CreateAppDraftRequest {
+    return CreateAppDraftRequest(request.organizationId)
+}
+
 fun toDomain(request: GetOrganizationRequestProto): GetOrganizationRequest {
     return GetOrganizationRequest(request.organizationId)
+}
+
+fun toProto(response: CreateAppDraftResponse): CreateAppDraftResponseProto {
+    return createAppDraftResponse {
+        appDraftId = response.appDraftId
+    }
 }
 
 fun toProto(response: GetMyOrganizationResponse): GetMyOrganizationResponseProto {

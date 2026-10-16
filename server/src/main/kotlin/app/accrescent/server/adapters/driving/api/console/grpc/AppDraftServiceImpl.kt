@@ -4,9 +4,33 @@
 
 package app.accrescent.server.adapters.driving.api.console.grpc
 
+import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
+import arrow.core.getOrElse
 import build.buf.gen.accrescent.console.v1.AppDraftServiceGrpcKt
+import build.buf.gen.accrescent.console.v1.CreateAppDraftRequest
 import kotlin.coroutines.CoroutineContext
+import build.buf.gen.accrescent.console.v1.CreateAppDraftResponse as CreateAppDraftResponseProto
 
+/**
+ * gRPC implementation of the console API's `AppDraftService`.
+ *
+ * Calls expect to be intercepted by [CallContextInterceptor].
+ *
+ * @param context the coroutine context to run method implementations in.
+ * @param consoleApi the console API to serve.
+ */
 class AppDraftServiceImpl(
     context: CoroutineContext,
-) : AppDraftServiceGrpcKt.AppDraftServiceCoroutineImplBase(context)
+    private val consoleApi: ConsoleApi,
+) : AppDraftServiceGrpcKt.AppDraftServiceCoroutineImplBase(context) {
+    override suspend fun createAppDraft(
+        request: CreateAppDraftRequest,
+    ): CreateAppDraftResponseProto {
+        val context = CallContextInterceptor.CALL_CONTEXT_KEY.get()
+
+        return consoleApi.createAppDraft(context, toDomain(request))
+            .mapLeft(::toStatus)
+            .getOrElse { throw it.asRuntimeException() }
+            .let(::toProto)
+    }
+}

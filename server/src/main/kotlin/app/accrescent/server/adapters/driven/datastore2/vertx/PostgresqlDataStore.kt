@@ -153,6 +153,28 @@ class PostgresqlDataStore(vertx: Vertx, config: DataStoreConfig.Postgresql) : Da
 private class PostgresqlTransaction(
     private val connection: SqlConnection,
 ) : DataStore.Transaction() {
+    override suspend fun countAppDraftsInOrg(
+        organizationId: String,
+    ): DataStoreResult<NonNegativeLong> = either {
+        connection
+            .executeSingleQuery(
+                "SELECT COUNT(*) FROM app_drafts WHERE organization_id = ?",
+                Tuple.of(organizationId),
+            )
+            .requireNonNegativeLong(0)
+    }
+
+    override suspend fun createAppDraft(
+        appDraftId: String,
+        organizationId: String,
+        createTime: OffsetDateTime,
+    ): DataStoreResult<Unit> = either {
+        connection.executeSingleUpdate(
+            "INSERT INTO app_drafts (id, organization_id, create_time) VALUES (?, ?, ?)",
+            Tuple.of(appDraftId, organizationId, createTime),
+        )
+    }
+
     override suspend fun createOrgWithOwner(
         organizationId: String,
         userId: String,
@@ -209,15 +231,22 @@ private class PostgresqlTransaction(
         organizationId: String,
     ): DataStoreResult<Option<OrgApiView>> = either {
         connection.executeOptionalQuery(
-            "SELECT id FROM organizations WHERE id = ?",
+            """
+                SELECT
+                    id,
+                    (SELECT COUNT(*) FROM app_drafts WHERE organization_id = organizations.id)
+                FROM organizations
+                WHERE id = ?
+            """.trimIndent(),
             Tuple.of(organizationId),
         )
             .map {
-                // Apps and app drafts aren't stored yet, so organizations never have any
                 OrgApiView(
                     id = it.requireValue<String>(0),
+                    // Apps aren't stored yet, so organizations never have any published
                     publishedAppCount = NonNegativeLong.MIN_VALUE,
-                    activeAppDraftCount = NonNegativeLong.MIN_VALUE,
+                    // App drafts can't be reviewed yet, so all of them are active
+                    activeAppDraftCount = it.requireNonNegativeLong(1),
                 )
             }
     }
@@ -261,6 +290,7 @@ private class PostgresqlTransaction(
         request: HasPermissionRequest,
     ): DataStoreResult<Boolean> = either {
         val sql = when (request) {
+            is HasPermissionRequest.CreateAppDraft,
             is HasPermissionRequest.ViewOrganization ->
                 "SELECT EXISTS(SELECT 1 FROM organizations WHERE id = ? AND owner_user_id = ?)"
         }

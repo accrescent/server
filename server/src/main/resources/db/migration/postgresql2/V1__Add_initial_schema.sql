@@ -36,3 +36,10 @@ CREATE TABLE sessions (
     expire_time timestamp with time zone NOT NULL,
     CHECK (expire_time > create_time)
 );
+
+-- App drafts
+CREATE TABLE app_drafts (
+    id stable_text PRIMARY KEY,
+    organization_id stable_text NOT NULL REFERENCES organizations(id),
+    create_time timestamp with time zone NOT NULL
+);

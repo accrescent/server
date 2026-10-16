@@ -62,6 +62,7 @@ fun main() {
     )
     val consoleApi = ConsoleApiImpl(
         dataStore = dataStore,
+        idGenerator = IdGenerator(randomSource),
         timestampSource = timestampSource,
         adminExternalUserId = config.authz.adminExternalUserId,
     )

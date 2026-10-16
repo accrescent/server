@@ -11,6 +11,17 @@ import arrow.core.Either
  */
 interface ConsoleApi {
     /**
+     * Creates an app draft.
+     *
+     * @param context the context for this call.
+     * @param request the request parameters.
+     */
+    suspend fun createAppDraft(
+        context: CallContext,
+        request: CreateAppDraftRequest,
+    ): Either<CreateAppDraftError, CreateAppDraftResponse>
+
+    /**
      * Gets the organization of the currently authenticated user.
      *
      * @param context the context for this call.

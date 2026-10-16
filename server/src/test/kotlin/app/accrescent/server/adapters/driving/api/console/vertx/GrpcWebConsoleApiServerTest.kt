@@ -5,7 +5,9 @@
 package app.accrescent.server.adapters.driving.api.console.vertx
 
 import app.accrescent.server.adapters.driven.datastore2.vertx.MemoryDataStore
+import app.accrescent.server.adapters.driven.randomsource.DeterministicRandomSource
 import app.accrescent.server.adapters.driven.timestampsource.FixedTimestampSource
+import app.accrescent.server.domain.IdGenerator
 import app.accrescent.server.domain.api.console2.ConsoleApiImpl
 import app.accrescent.server.domain.authn.ExternalUserId
 import build.buf.gen.accrescent.console.v1.UserServiceGrpc
@@ -59,6 +61,7 @@ class GrpcWebConsoleApiServerTest {
         private val client = vertx.createHttpClient()
         private val consoleApi = ConsoleApiImpl(
             dataStore = MemoryDataStore(vertx),
+            idGenerator = IdGenerator(DeterministicRandomSource()),
             timestampSource = FixedTimestampSource(),
             adminExternalUserId = ExternalUserId.Github(1),
         )

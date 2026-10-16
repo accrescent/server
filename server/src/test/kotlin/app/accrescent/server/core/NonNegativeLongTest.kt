@@ -28,4 +28,11 @@ class NonNegativeLongTest {
 
         assertTrue(result.isSome())
     }
+
+    @Test
+    fun `smaller value is less than larger value`() {
+        val result = NonNegativeLong.new(0).unwrap() < NonNegativeLong.new(1).unwrap()
+
+        assertTrue(result)
+    }
 }

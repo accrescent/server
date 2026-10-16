@@ -7,6 +7,11 @@ package app.accrescent.server.domain.ports.driving.api.console2
 import app.accrescent.server.core.Error
 
 /**
+ * An error that can occur when creating an app draft.
+ */
+sealed interface CreateAppDraftError
+
+/**
  * An error that can occur when getting the authenticated user's organization.
  */
 sealed interface GetMyOrganizationError
@@ -24,7 +29,12 @@ sealed interface GetSelfError
 /**
  * A server-side error that can occur in any console API method.
  */
-sealed class ServerError : Error(), GetMyOrganizationError, GetOrganizationError, GetSelfError {
+sealed class ServerError :
+    Error(),
+    CreateAppDraftError,
+    GetMyOrganizationError,
+    GetOrganizationError,
+    GetSelfError {
     /**
      * The server encountered an unexpected internal error.
      */
@@ -41,15 +51,27 @@ sealed class ServerError : Error(), GetMyOrganizationError, GetOrganizationError
 }
 
 /**
+ * The organization already has the maximum number of active app drafts allowed.
+ */
+class ActiveAppDraftLimitExceededError : Error(), CreateAppDraftError {
+    override val message = "active app draft limit exceeded"
+}
+
+/**
  * The caller does not have sufficient permission to perform the operation.
  */
-class InsufficientPermissionError : Error(), GetOrganizationError {
+class InsufficientPermissionError : Error(), CreateAppDraftError, GetOrganizationError {
     override val message = "insufficient permission"
 }
 
 /**
  * The caller of a method which requires authentication is not authenticated.
  */
-class UnauthenticatedError : Error(), GetMyOrganizationError, GetOrganizationError, GetSelfError {
+class UnauthenticatedError :
+    Error(),
+    CreateAppDraftError,
+    GetMyOrganizationError,
+    GetOrganizationError,
+    GetSelfError {
     override val message = "unauthenticated"
 }

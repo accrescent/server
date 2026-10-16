@@ -5,6 +5,7 @@
 package app.accrescent.server.domain.ports.driven.datastore2
 
 import app.accrescent.server.core.Error
+import app.accrescent.server.core.NonNegativeLong
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.crypto.Sha256Hash
 import arrow.core.Either
@@ -109,6 +110,32 @@ interface DataStore {
      * Provides access to all data access methods which participate in a data store transaction.
      */
     abstract class Transaction {
+        /**
+         * Counts the app drafts in an organization.
+         *
+         * @param organizationId the ID of the organization to count the app drafts of.
+         * @return the number of app drafts in the organization, or zero if the organization does
+         * not exist.
+         */
+        abstract suspend fun countAppDraftsInOrg(
+            organizationId: String,
+        ): DataStoreResult<NonNegativeLong>
+
+        /**
+         * Creates an app draft.
+         *
+         * @param appDraftId the ID of the app draft to create.
+         * @param organizationId the ID of the organization to create the app draft in.
+         * @param createTime the creation timestamp to set for the new app draft.
+         * @return [DataStoreError.ConsistencyViolation] if an app draft with the same ID already
+         * exists or the organization does not exist.
+         */
+        abstract suspend fun createAppDraft(
+            appDraftId: String,
+            organizationId: String,
+            createTime: OffsetDateTime,
+        ): DataStoreResult<Unit>
+
         /**
          * Creates an organization with its owner.
          *

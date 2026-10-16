@@ -6,6 +6,8 @@ package app.accrescent.server.adapters.driving.api.console.grpc
 
 import app.accrescent.server.core.NonNegativeLong
 import app.accrescent.server.core.unwrap
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
@@ -13,6 +15,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetSelfResponse
 import app.accrescent.server.domain.ports.driving.api.console2.Organization
 import app.accrescent.server.domain.ports.driving.api.console2.User
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
+import build.buf.gen.accrescent.console.v1.createAppDraftRequest
+import build.buf.gen.accrescent.console.v1.createAppDraftResponse
 import build.buf.gen.accrescent.console.v1.getMyOrganizationResponse
 import build.buf.gen.accrescent.console.v1.getOrganizationRequest
 import build.buf.gen.accrescent.console.v1.getOrganizationResponse
@@ -25,11 +29,27 @@ import build.buf.gen.accrescent.console.v1.UserRole as UserRoleProto
 
 class MessageConvertersTest {
     @Test
+    fun `toDomain correctly converts CreateAppDraftRequest`() {
+        val proto = createAppDraftRequest { organizationId = "org1" }
+        val domain = CreateAppDraftRequest("org1")
+
+        assertEquals(domain, toDomain(proto))
+    }
+
+    @Test
     fun `toDomain correctly converts GetOrganizationRequest`() {
         val proto = getOrganizationRequest { organizationId = "org1" }
         val domain = GetOrganizationRequest("org1")
 
         assertEquals(domain, toDomain(proto))
+    }
+
+    @Test
+    fun `toProto correctly converts CreateAppDraftResponse`() {
+        val domain = CreateAppDraftResponse("draft1")
+        val proto = createAppDraftResponse { appDraftId = "draft1" }
+
+        assertEquals(proto, toProto(domain))
     }
 
     @Test

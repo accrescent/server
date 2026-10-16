@@ -218,6 +218,70 @@ abstract class DataStoreConformanceTest {
     }
 
     @Test
+    suspend fun `countAppDraftsInOrg returns number of app drafts in organization`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createOrgWithOwner("org2", "user2", ExternalUserId.Github(2), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraft("draft2", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraft("draft3", "org2", UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            val count = dataStore
+                .runInTransaction { tx -> tx.countAppDraftsInOrg("org1").bind() }
+                .unwrap2()
+
+            assertEquals(2L, count.value)
+        }
+    }
+
+    @Test
+    suspend fun `countAppDraftsInOrg returns zero for non-existent organization`() {
+        withMigratedDataStore { dataStore ->
+            val count = dataStore
+                .runInTransaction { tx -> tx.countAppDraftsInOrg("org1").bind() }
+                .unwrap2()
+
+            assertEquals(NonNegativeLong.MIN_VALUE, count)
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraft returns ConsistencyViolation if app draft with same ID already exists`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createOrgWithOwner("org2", "user2", ExternalUserId.Github(2), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            val error = dataStore.runInTransaction { tx ->
+                tx.createAppDraft("draft1", "org2", UNIX_EPOCH).bind()
+            }
+                .unwrap()
+                .unwrapErr()
+
+            assertInstanceOf<DataStoreError.ConsistencyViolation>(error)
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraft returns ConsistencyViolation if organization does not exist`() {
+        withMigratedDataStore { dataStore ->
+            val error = dataStore.runInTransaction { tx ->
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+            }
+                .unwrap()
+                .unwrapErr()
+
+            assertInstanceOf<DataStoreError.ConsistencyViolation>(error)
+        }
+    }
+
+    @Test
     suspend fun `createOrgWithOwner returns ConsistencyViolation if org with same ID already exists`() {
         withMigratedDataStore { dataStore ->
             dataStore.runInTransaction { tx ->
@@ -404,6 +468,7 @@ abstract class DataStoreConformanceTest {
         withMigratedDataStore { dataStore ->
             dataStore.runInTransaction { tx ->
                 tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
             }
                 .unwrap2()
 
@@ -412,7 +477,7 @@ abstract class DataStoreConformanceTest {
                 .unwrap2()
 
             assertEquals(
-                Some(OrgApiView("org1", NonNegativeLong.MIN_VALUE, NonNegativeLong.MIN_VALUE)),
+                Some(OrgApiView("org1", NonNegativeLong.MIN_VALUE, NonNegativeLong.new(1).unwrap())),
                 organization,
             )
         }
@@ -572,6 +637,13 @@ abstract class DataStoreConformanceTest {
         @JvmStatic
         private fun hasPermissionReturnsTrueWithMinimalRelationshipsTestCases()
                 : List<HasPermissionReturnsTrueWithMinimalRelationships> = listOf(
+            HasPermissionReturnsTrueWithMinimalRelationships(
+                HasPermissionRequest.CreateAppDraft("org1", "user1"),
+            ) { tx ->
+                either {
+                    tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                }
+            },
             HasPermissionReturnsTrueWithMinimalRelationships(
                 HasPermissionRequest.ViewOrganization("org1", "user1"),
             ) { tx ->

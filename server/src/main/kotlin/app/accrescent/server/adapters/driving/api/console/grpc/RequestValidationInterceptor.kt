@@ -71,7 +71,11 @@ class RequestValidationInterceptor : ServerInterceptor {
                 validator.validate(message)
             } catch (e: ValidationException) {
                 logger.error("Failed to validate request message", e)
-                call.close(RpcStatus.newBuilder().setCode(Code.INTERNAL_VALUE).build())
+                val status = RpcStatus.newBuilder()
+                    .setCode(Code.INTERNAL_VALUE)
+                    .setMessage("internal server error")
+                    .build()
+                call.close(status)
                 return
             }
 

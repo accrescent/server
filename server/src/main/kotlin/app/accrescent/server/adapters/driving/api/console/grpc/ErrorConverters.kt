@@ -4,6 +4,7 @@
 
 package app.accrescent.server.adapters.driving.api.console.grpc
 
+import app.accrescent.server.core.Error
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
@@ -18,50 +19,54 @@ import com.google.rpc.Status
 
 fun toStatus(error: CreateAppDraftError): Status {
     return when (error) {
-        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
-        is InsufficientPermissionError -> status(Code.PERMISSION_DENIED)
-        is ActiveAppDraftLimitExceededError -> status(Code.RESOURCE_EXHAUSTED)
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED, error)
+        is InsufficientPermissionError -> status(Code.PERMISSION_DENIED, error)
+        is ActiveAppDraftLimitExceededError -> status(Code.RESOURCE_EXHAUSTED, error)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: DeleteAppDraftError): Status {
     return when (error) {
-        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
-        is InsufficientPermissionError -> status(Code.PERMISSION_DENIED)
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED, error)
+        is InsufficientPermissionError -> status(Code.PERMISSION_DENIED, error)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: GetMyOrganizationError): Status {
     return when (error) {
-        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED, error)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: GetOrganizationError): Status {
     return when (error) {
-        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
-        is InsufficientPermissionError -> status(Code.PERMISSION_DENIED)
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED, error)
+        is InsufficientPermissionError -> status(Code.PERMISSION_DENIED, error)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: GetSelfError): Status {
     return when (error) {
-        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED, error)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: ServerError): Status {
     return when (error) {
-        is ServerError.InternalServerError -> status(Code.INTERNAL)
-        is ServerError.ServiceUnavailableError -> status(Code.UNAVAILABLE)
+        is ServerError.InternalServerError -> status(Code.INTERNAL, error)
+        is ServerError.ServiceUnavailableError -> status(Code.UNAVAILABLE, error)
     }
 }
 
-private fun status(code: Code): Status {
-    return Status.newBuilder().setCode(code.number).build()
+private fun status(code: Code, error: Error): Status {
+    return Status.newBuilder()
+        .setCode(code.number)
+        // Intentionally don't pass error.toString() so that error causes aren't returned to clients
+        .setMessage(error.message)
+        .build()
 }

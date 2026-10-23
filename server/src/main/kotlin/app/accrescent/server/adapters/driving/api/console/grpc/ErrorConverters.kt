@@ -13,50 +13,55 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
 import app.accrescent.server.domain.ports.driving.api.console2.ServerError
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
-import io.grpc.Status
+import com.google.rpc.Code
+import com.google.rpc.Status
 
 fun toStatus(error: CreateAppDraftError): Status {
     return when (error) {
-        is UnauthenticatedError -> Status.UNAUTHENTICATED
-        is InsufficientPermissionError -> Status.PERMISSION_DENIED
-        is ActiveAppDraftLimitExceededError -> Status.RESOURCE_EXHAUSTED
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
+        is InsufficientPermissionError -> status(Code.PERMISSION_DENIED)
+        is ActiveAppDraftLimitExceededError -> status(Code.RESOURCE_EXHAUSTED)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: DeleteAppDraftError): Status {
     return when (error) {
-        is UnauthenticatedError -> Status.UNAUTHENTICATED
-        is InsufficientPermissionError -> Status.PERMISSION_DENIED
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
+        is InsufficientPermissionError -> status(Code.PERMISSION_DENIED)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: GetMyOrganizationError): Status {
     return when (error) {
-        is UnauthenticatedError -> Status.UNAUTHENTICATED
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: GetOrganizationError): Status {
     return when (error) {
-        is UnauthenticatedError -> Status.UNAUTHENTICATED
-        is InsufficientPermissionError -> Status.PERMISSION_DENIED
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
+        is InsufficientPermissionError -> status(Code.PERMISSION_DENIED)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: GetSelfError): Status {
     return when (error) {
-        is UnauthenticatedError -> Status.UNAUTHENTICATED
+        is UnauthenticatedError -> status(Code.UNAUTHENTICATED)
         is ServerError -> toStatus(error)
     }
 }
 
 fun toStatus(error: ServerError): Status {
     return when (error) {
-        is ServerError.InternalServerError -> Status.INTERNAL
-        is ServerError.ServiceUnavailableError -> Status.UNAVAILABLE
+        is ServerError.InternalServerError -> status(Code.INTERNAL)
+        is ServerError.ServiceUnavailableError -> status(Code.UNAVAILABLE)
     }
+}
+
+private fun status(code: Code): Status {
+    return Status.newBuilder().setCode(code.number).build()
 }

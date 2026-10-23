@@ -13,7 +13,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
 import app.accrescent.server.domain.ports.driving.api.console2.ServerError
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
-import io.grpc.Status
+import com.google.rpc.Code
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -26,7 +26,7 @@ class ErrorConvertersTest {
     ) {
         val status = toStatus(testCase.error)
 
-        assertEquals(testCase.expectedCode, status.code)
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
     }
 
     @ParameterizedTest
@@ -36,7 +36,7 @@ class ErrorConvertersTest {
     ) {
         val status = toStatus(testCase.error)
 
-        assertEquals(testCase.expectedCode, status.code)
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
     }
 
     @ParameterizedTest
@@ -46,7 +46,7 @@ class ErrorConvertersTest {
     ) {
         val status = toStatus(testCase.error)
 
-        assertEquals(testCase.expectedCode, status.code)
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
     }
 
     @ParameterizedTest
@@ -56,7 +56,7 @@ class ErrorConvertersTest {
     ) {
         val status = toStatus(testCase.error)
 
-        assertEquals(testCase.expectedCode, status.code)
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
     }
 
     @ParameterizedTest
@@ -66,7 +66,7 @@ class ErrorConvertersTest {
     ) {
         val status = toStatus(testCase.error)
 
-        assertEquals(testCase.expectedCode, status.code)
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
     }
 
     @ParameterizedTest
@@ -76,38 +76,38 @@ class ErrorConvertersTest {
     ) {
         val status = toStatus(testCase.error)
 
-        assertEquals(testCase.expectedCode, status.code)
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
     }
 
     companion object {
         data class ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
             val error: CreateAppDraftError,
-            val expectedCode: Status.Code,
+            val expectedCode: Code,
         )
 
         data class ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
             val error: DeleteAppDraftError,
-            val expectedCode: Status.Code,
+            val expectedCode: Code,
         )
 
         data class ToStatusCorrectlyConvertsGetMyOrganizationErrorTestCase(
             val error: GetMyOrganizationError,
-            val expectedCode: Status.Code,
+            val expectedCode: Code,
         )
 
         data class ToStatusCorrectlyConvertsGetOrganizationErrorTestCase(
             val error: GetOrganizationError,
-            val expectedCode: Status.Code,
+            val expectedCode: Code,
         )
 
         data class ToStatusCorrectlyConvertsGetSelfErrorTestCase(
             val error: GetSelfError,
-            val expectedCode: Status.Code,
+            val expectedCode: Code,
         )
 
         data class ToStatusCorrectlyConvertsServerErrorTestCase(
             val error: ServerError,
-            val expectedCode: Status.Code,
+            val expectedCode: Code,
         )
 
         @JvmStatic
@@ -116,15 +116,15 @@ class ErrorConvertersTest {
             return listOf(
                 ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
                     UnauthenticatedError(),
-                    Status.Code.UNAUTHENTICATED,
+                    Code.UNAUTHENTICATED,
                 ),
                 ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
                     InsufficientPermissionError(),
-                    Status.Code.PERMISSION_DENIED,
+                    Code.PERMISSION_DENIED,
                 ),
                 ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
                     ActiveAppDraftLimitExceededError(),
-                    Status.Code.RESOURCE_EXHAUSTED,
+                    Code.RESOURCE_EXHAUSTED,
                 ),
             )
         }
@@ -135,11 +135,11 @@ class ErrorConvertersTest {
             return listOf(
                 ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
                     UnauthenticatedError(),
-                    Status.Code.UNAUTHENTICATED,
+                    Code.UNAUTHENTICATED,
                 ),
                 ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
                     InsufficientPermissionError(),
-                    Status.Code.PERMISSION_DENIED,
+                    Code.PERMISSION_DENIED,
                 ),
             )
         }
@@ -150,7 +150,7 @@ class ErrorConvertersTest {
             return listOf(
                 ToStatusCorrectlyConvertsGetMyOrganizationErrorTestCase(
                     UnauthenticatedError(),
-                    Status.Code.UNAUTHENTICATED,
+                    Code.UNAUTHENTICATED,
                 ),
             )
         }
@@ -161,11 +161,11 @@ class ErrorConvertersTest {
             return listOf(
                 ToStatusCorrectlyConvertsGetOrganizationErrorTestCase(
                     UnauthenticatedError(),
-                    Status.Code.UNAUTHENTICATED,
+                    Code.UNAUTHENTICATED,
                 ),
                 ToStatusCorrectlyConvertsGetOrganizationErrorTestCase(
                     InsufficientPermissionError(),
-                    Status.Code.PERMISSION_DENIED,
+                    Code.PERMISSION_DENIED,
                 ),
             )
         }
@@ -176,7 +176,7 @@ class ErrorConvertersTest {
             return listOf(
                 ToStatusCorrectlyConvertsGetSelfErrorTestCase(
                     UnauthenticatedError(),
-                    Status.Code.UNAUTHENTICATED,
+                    Code.UNAUTHENTICATED,
                 ),
             )
         }
@@ -187,11 +187,11 @@ class ErrorConvertersTest {
             return listOf(
                 ToStatusCorrectlyConvertsServerErrorTestCase(
                     ServerError.InternalServerError(),
-                    Status.Code.INTERNAL,
+                    Code.INTERNAL,
                 ),
                 ToStatusCorrectlyConvertsServerErrorTestCase(
                     ServerError.ServiceUnavailableError(),
-                    Status.Code.UNAVAILABLE,
+                    Code.UNAVAILABLE,
                 ),
             )
         }

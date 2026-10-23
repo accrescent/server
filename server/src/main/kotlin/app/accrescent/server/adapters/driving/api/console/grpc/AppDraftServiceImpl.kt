@@ -11,6 +11,7 @@ import build.buf.gen.accrescent.console.v1.CreateAppDraftRequest
 import build.buf.gen.accrescent.console.v1.DeleteAppDraftRequest
 import build.buf.gen.accrescent.console.v1.DeleteAppDraftResponse
 import build.buf.gen.accrescent.console.v1.deleteAppDraftResponse
+import io.grpc.protobuf.StatusProto
 import kotlin.coroutines.CoroutineContext
 import build.buf.gen.accrescent.console.v1.CreateAppDraftResponse as CreateAppDraftResponseProto
 
@@ -33,7 +34,7 @@ class AppDraftServiceImpl(
 
         return consoleApi.createAppDraft(context, toDomain(request))
             .mapLeft(::toStatus)
-            .getOrElse { throw it.asRuntimeException() }
+            .getOrElse { throw StatusProto.toStatusRuntimeException(it) }
             .let(::toProto)
     }
 
@@ -44,7 +45,7 @@ class AppDraftServiceImpl(
 
         consoleApi.deleteAppDraft(context, toDomain(request))
             .mapLeft(::toStatus)
-            .getOrElse { throw it.asRuntimeException() }
+            .getOrElse { throw StatusProto.toStatusRuntimeException(it) }
 
         return deleteAppDraftResponse {}
     }

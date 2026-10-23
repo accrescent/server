@@ -8,6 +8,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import arrow.core.getOrElse
 import build.buf.gen.accrescent.console.v1.GetSelfRequest
 import build.buf.gen.accrescent.console.v1.UserServiceGrpcKt
+import io.grpc.protobuf.StatusProto
 import kotlin.coroutines.CoroutineContext
 import build.buf.gen.accrescent.console.v1.GetSelfResponse as GetSelfResponseProto
 
@@ -28,7 +29,7 @@ class UserServiceImpl(
 
         return consoleApi.getSelf(context)
             .mapLeft(::toStatus)
-            .getOrElse { throw it.asRuntimeException() }
+            .getOrElse { throw StatusProto.toStatusRuntimeException(it) }
             .let(::toProto)
     }
 }

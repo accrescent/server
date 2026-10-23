@@ -9,6 +9,7 @@ import arrow.core.getOrElse
 import build.buf.gen.accrescent.console.v1.GetMyOrganizationRequest
 import build.buf.gen.accrescent.console.v1.GetOrganizationRequest
 import build.buf.gen.accrescent.console.v1.OrganizationServiceGrpcKt
+import io.grpc.protobuf.StatusProto
 import kotlin.coroutines.CoroutineContext
 import build.buf.gen.accrescent.console.v1.GetMyOrganizationResponse as GetMyOrganizationResponseProto
 import build.buf.gen.accrescent.console.v1.GetOrganizationResponse as GetOrganizationResponseProto
@@ -32,7 +33,7 @@ class OrganizationServiceImpl(
 
         return consoleApi.getOrganization(context, toDomain(request))
             .mapLeft(::toStatus)
-            .getOrElse { throw it.asRuntimeException() }
+            .getOrElse { throw StatusProto.toStatusRuntimeException(it) }
             .let(::toProto)
     }
 
@@ -43,7 +44,7 @@ class OrganizationServiceImpl(
 
         return consoleApi.getMyOrganization(context)
             .mapLeft(::toStatus)
-            .getOrElse { throw it.asRuntimeException() }
+            .getOrElse { throw StatusProto.toStatusRuntimeException(it) }
             .let(::toProto)
     }
 }

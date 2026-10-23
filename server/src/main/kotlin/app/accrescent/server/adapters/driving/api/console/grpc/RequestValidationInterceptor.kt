@@ -8,6 +8,7 @@ import build.buf.protovalidate.Validator
 import build.buf.protovalidate.ValidatorFactory
 import build.buf.protovalidate.exceptions.ValidationException
 import com.google.protobuf.Message
+import com.google.rpc.Code
 import io.grpc.ForwardingServerCall
 import io.grpc.ForwardingServerCallListener
 import io.grpc.Metadata
@@ -15,14 +16,16 @@ import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
 import io.grpc.ServerInterceptor
 import io.grpc.Status
+import io.grpc.protobuf.StatusProto
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
+import com.google.rpc.Status as RpcStatus
 
 /**
  * A gRPC server interceptor which validates request messages against their
  * [protovalidate](https://protovalidate.com) rules.
  *
- * Calls with an invalid request message are closed with [Status.INVALID_ARGUMENT].
+ * Calls with an invalid request message are closed with [Code.INVALID_ARGUMENT].
  */
 class RequestValidationInterceptor : ServerInterceptor {
     override fun <ReqT, RespT> interceptCall(
@@ -68,14 +71,18 @@ class RequestValidationInterceptor : ServerInterceptor {
                 validator.validate(message)
             } catch (e: ValidationException) {
                 logger.error("Failed to validate request message", e)
-                call.close(Status.INTERNAL, Metadata())
+                call.close(RpcStatus.newBuilder().setCode(Code.INTERNAL_VALUE).build())
                 return
             }
 
             if (result.isSuccess) {
                 super.onMessage(message)
             } else {
-                call.close(Status.INVALID_ARGUMENT.withDescription(result.toString()), Metadata())
+                val status = RpcStatus.newBuilder()
+                    .setCode(Code.INVALID_ARGUMENT_VALUE)
+                    .setMessage(result.toString())
+                    .build()
+                call.close(status)
             }
         }
     }
@@ -84,4 +91,9 @@ class RequestValidationInterceptor : ServerInterceptor {
         private val logger = LoggerFactory.getLogger(RequestValidationInterceptor::class.java)
         private val validator: Validator = ValidatorFactory.newBuilder().build()
     }
+}
+
+private fun ServerCall<*, *>.close(status: RpcStatus) {
+    val exception = StatusProto.toStatusRuntimeException(status)
+    close(exception.status, exception.trailers ?: Metadata())
 }

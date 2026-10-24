@@ -125,8 +125,14 @@ class AuthnServer(
             // The GitHub REST API requires a User-Agent header to be set. See
             // https://docs.github.com/en/rest/using-the-rest-api/getting-started-with-the-rest-api#user-agent.
             .setHeaders(JsonObject().put(HttpHeaders.USER_AGENT.toString(), "accrescent-server"))
-            // Share one connection pool to GitHub across all AuthnServer instances
-            .setHttpClientOptions(HttpClientOptions().setShared(true).setName(GITHUB_HTTP_CLIENT_NAME)),
+            .setHttpClientOptions(
+                // Share one connection pool to GitHub across all AuthnServer instances
+                HttpClientOptions().setShared(true).setName(GITHUB_HTTP_CLIENT_NAME)
+                    // Increase the maximum allowed response header size from 8 KiB to 16 KiB since
+                    // GitHub has been observed to respond with headers over 8 KiB (mostly due to
+                    // its large content security policy).
+                    .setMaxHeaderSize(16 * 1024)
+            ),
     )
 
     override fun handle(request: HttpServerRequest) {

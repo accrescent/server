@@ -13,11 +13,16 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
 import app.accrescent.server.domain.ports.driving.api.console2.ServerError
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
+import build.buf.gen.accrescent.console.v1.ErrorReason
 import com.google.rpc.Code
+import com.google.rpc.ErrorInfo
+import com.google.rpc.Status
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+
+private const val ERROR_DOMAIN = "console.accrescent.app"
 
 class ErrorConvertersTest {
     @ParameterizedTest
@@ -29,6 +34,7 @@ class ErrorConvertersTest {
 
         assertEquals(testCase.expectedCode, Code.forNumber(status.code))
         assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
     }
 
     @ParameterizedTest
@@ -40,6 +46,7 @@ class ErrorConvertersTest {
 
         assertEquals(testCase.expectedCode, Code.forNumber(status.code))
         assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
     }
 
     @ParameterizedTest
@@ -51,6 +58,7 @@ class ErrorConvertersTest {
 
         assertEquals(testCase.expectedCode, Code.forNumber(status.code))
         assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
     }
 
     @ParameterizedTest
@@ -62,6 +70,7 @@ class ErrorConvertersTest {
 
         assertEquals(testCase.expectedCode, Code.forNumber(status.code))
         assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
     }
 
     @ParameterizedTest
@@ -73,6 +82,7 @@ class ErrorConvertersTest {
 
         assertEquals(testCase.expectedCode, Code.forNumber(status.code))
         assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
     }
 
     @ParameterizedTest
@@ -84,37 +94,44 @@ class ErrorConvertersTest {
 
         assertEquals(testCase.expectedCode, Code.forNumber(status.code))
         assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
     }
 
     companion object {
         data class ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
             val error: CreateAppDraftError,
             val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
         )
 
         data class ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
             val error: DeleteAppDraftError,
             val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
         )
 
         data class ToStatusCorrectlyConvertsGetMyOrganizationErrorTestCase(
             val error: GetMyOrganizationError,
             val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
         )
 
         data class ToStatusCorrectlyConvertsGetOrganizationErrorTestCase(
             val error: GetOrganizationError,
             val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
         )
 
         data class ToStatusCorrectlyConvertsGetSelfErrorTestCase(
             val error: GetSelfError,
             val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
         )
 
         data class ToStatusCorrectlyConvertsServerErrorTestCase(
             val error: ServerError,
             val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
         )
 
         @JvmStatic
@@ -124,14 +141,17 @@ class ErrorConvertersTest {
                 ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
                     UnauthenticatedError(),
                     Code.UNAUTHENTICATED,
+                    errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
                 ),
                 ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
                     InsufficientPermissionError(),
                     Code.PERMISSION_DENIED,
+                    errorInfo(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION),
                 ),
                 ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase(
                     ActiveAppDraftLimitExceededError(),
                     Code.RESOURCE_EXHAUSTED,
+                    errorInfo(ErrorReason.ERROR_REASON_RESOURCE_LIMIT_EXCEEDED),
                 ),
             )
         }
@@ -143,10 +163,12 @@ class ErrorConvertersTest {
                 ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
                     UnauthenticatedError(),
                     Code.UNAUTHENTICATED,
+                    errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
                 ),
                 ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
                     InsufficientPermissionError(),
                     Code.PERMISSION_DENIED,
+                    errorInfo(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION),
                 ),
             )
         }
@@ -158,6 +180,7 @@ class ErrorConvertersTest {
                 ToStatusCorrectlyConvertsGetMyOrganizationErrorTestCase(
                     UnauthenticatedError(),
                     Code.UNAUTHENTICATED,
+                    errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
                 ),
             )
         }
@@ -169,10 +192,12 @@ class ErrorConvertersTest {
                 ToStatusCorrectlyConvertsGetOrganizationErrorTestCase(
                     UnauthenticatedError(),
                     Code.UNAUTHENTICATED,
+                    errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
                 ),
                 ToStatusCorrectlyConvertsGetOrganizationErrorTestCase(
                     InsufficientPermissionError(),
                     Code.PERMISSION_DENIED,
+                    errorInfo(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION),
                 ),
             )
         }
@@ -184,6 +209,7 @@ class ErrorConvertersTest {
                 ToStatusCorrectlyConvertsGetSelfErrorTestCase(
                     UnauthenticatedError(),
                     Code.UNAUTHENTICATED,
+                    errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
                 ),
             )
         }
@@ -195,12 +221,25 @@ class ErrorConvertersTest {
                 ToStatusCorrectlyConvertsServerErrorTestCase(
                     ServerError.InternalServerError(),
                     Code.INTERNAL,
+                    errorInfo(ErrorReason.ERROR_REASON_INTERNAL),
                 ),
                 ToStatusCorrectlyConvertsServerErrorTestCase(
                     ServerError.ServiceUnavailableError(),
                     Code.UNAVAILABLE,
+                    errorInfo(ErrorReason.ERROR_REASON_SERVICE_UNAVAILABLE),
                 ),
             )
         }
     }
+}
+
+private fun errorInfo(reason: ErrorReason): ErrorInfo {
+    return ErrorInfo.newBuilder()
+        .setReason(reason.name)
+        .setDomain(ERROR_DOMAIN)
+        .build()
+}
+
+private fun unpackErrorInfo(status: Status): ErrorInfo {
+    return status.detailsList.single().unpack(ErrorInfo::class.java)
 }

@@ -4,11 +4,11 @@
 
 package app.accrescent.server.adapters.driving.api.console.grpc
 
+import build.buf.gen.accrescent.console.v1.ErrorReason
 import build.buf.protovalidate.Validator
 import build.buf.protovalidate.ValidatorFactory
 import build.buf.protovalidate.exceptions.ValidationException
 import com.google.protobuf.Message
-import com.google.rpc.Code
 import io.grpc.ForwardingServerCall
 import io.grpc.ForwardingServerCallListener
 import io.grpc.Metadata
@@ -25,7 +25,8 @@ import com.google.rpc.Status as RpcStatus
  * A gRPC server interceptor which validates request messages against their
  * [protovalidate](https://protovalidate.com) rules.
  *
- * Calls with an invalid request message are closed with [Code.INVALID_ARGUMENT].
+ * Calls with an invalid request message are closed with an error reason of
+ * [ErrorReason.ERROR_REASON_INVALID_REQUEST].
  */
 class RequestValidationInterceptor : ServerInterceptor {
     override fun <ReqT, RespT> interceptCall(
@@ -71,22 +72,14 @@ class RequestValidationInterceptor : ServerInterceptor {
                 validator.validate(message)
             } catch (e: ValidationException) {
                 logger.error("Failed to validate request message", e)
-                val status = RpcStatus.newBuilder()
-                    .setCode(Code.INTERNAL_VALUE)
-                    .setMessage("internal server error")
-                    .build()
-                call.close(status)
+                call.close(status(ErrorReason.ERROR_REASON_INTERNAL, "internal server error"))
                 return
             }
 
             if (result.isSuccess) {
                 super.onMessage(message)
             } else {
-                val status = RpcStatus.newBuilder()
-                    .setCode(Code.INVALID_ARGUMENT_VALUE)
-                    .setMessage(result.toString())
-                    .build()
-                call.close(status)
+                call.close(status(ErrorReason.ERROR_REASON_INVALID_REQUEST, result.toString()))
             }
         }
     }

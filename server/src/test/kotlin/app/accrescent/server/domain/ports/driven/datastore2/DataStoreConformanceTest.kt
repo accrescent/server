@@ -5,7 +5,7 @@
 package app.accrescent.server.domain.ports.driven.datastore2
 
 import app.accrescent.server.UNIX_EPOCH
-import app.accrescent.server.core.NonNegativeLong
+import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.core.unwrap2
 import app.accrescent.server.core.unwrapErr
@@ -233,7 +233,7 @@ abstract class DataStoreConformanceTest {
                 .runInTransaction { tx -> tx.countAppDraftsInOrg("org1").bind() }
                 .unwrap2()
 
-            assertEquals(2L, count.value)
+            assertEquals(2, count.value)
         }
     }
 
@@ -244,7 +244,7 @@ abstract class DataStoreConformanceTest {
                 .runInTransaction { tx -> tx.countAppDraftsInOrg("org1").bind() }
                 .unwrap2()
 
-            assertEquals(NonNegativeLong.MIN_VALUE, count)
+            assertEquals(NonNegativeInt.MIN_VALUE, count)
         }
     }
 
@@ -477,7 +477,7 @@ abstract class DataStoreConformanceTest {
                 .runInTransaction { tx -> tx.countAppDraftsInOrg("org1").bind() }
                 .unwrap2()
 
-            assertEquals(NonNegativeLong.MIN_VALUE, count)
+            assertEquals(NonNegativeInt.MIN_VALUE, count)
         }
     }
 
@@ -506,7 +506,7 @@ abstract class DataStoreConformanceTest {
                 .unwrap2()
 
             assertEquals(
-                Some(OrgApiView("org1", NonNegativeLong.MIN_VALUE, NonNegativeLong.new(1).unwrap())),
+                Some(OrgApiView("org1", NonNegativeInt.MIN_VALUE, NonNegativeInt.new(1).unwrap())),
                 organization,
             )
         }

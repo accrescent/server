@@ -5,7 +5,7 @@
 package app.accrescent.server.domain.ports.driven.datastore2
 
 import app.accrescent.server.core.Error
-import app.accrescent.server.core.NonNegativeLong
+import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.crypto.Sha256Hash
 import arrow.core.Either
@@ -119,7 +119,7 @@ interface DataStore {
          */
         abstract suspend fun countAppDraftsInOrg(
             organizationId: String,
-        ): DataStoreResult<NonNegativeLong>
+        ): DataStoreResult<NonNegativeInt>
 
         /**
          * Creates an app draft.

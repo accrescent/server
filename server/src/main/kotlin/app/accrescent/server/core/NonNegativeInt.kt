@@ -14,8 +14,10 @@ import arrow.core.Some
  * @property value the underlying [Int] representation of this value.
  */
 @JvmInline
-value class NonNegativeInt private constructor(val value: Int) {
+value class NonNegativeInt private constructor(val value: Int) : Comparable<NonNegativeInt> {
     companion object {
+        val MIN_VALUE = NonNegativeInt(0)
+
         fun new(value: Int): Option<NonNegativeInt> {
             return if (value >= 0) {
                 Some(NonNegativeInt(value))
@@ -23,5 +25,9 @@ value class NonNegativeInt private constructor(val value: Int) {
                 None
             }
         }
+    }
+
+    override fun compareTo(other: NonNegativeInt): Int {
+        return value.compareTo(other.value)
     }
 }

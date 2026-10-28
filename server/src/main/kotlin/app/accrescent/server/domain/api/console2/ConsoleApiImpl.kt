@@ -4,7 +4,7 @@
 
 package app.accrescent.server.domain.api.console2
 
-import app.accrescent.server.core.NonNegativeLong
+import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.bindMapLeft
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.IdGenerator
@@ -174,7 +174,7 @@ class ConsoleApiImpl(
     }
 
     private companion object {
-        private val ACTIVE_APP_DRAFT_LIMIT = NonNegativeLong.new(3).unwrap()
-        private val PUBLISHED_APP_LIMIT = NonNegativeLong.new(1).unwrap()
+        private val ACTIVE_APP_DRAFT_LIMIT = NonNegativeInt.new(3).unwrap()
+        private val PUBLISHED_APP_LIMIT = NonNegativeInt.new(1).unwrap()
     }
 }

@@ -12,6 +12,7 @@ import com.android.sdklib.BuildToolInfo
 import com.android.tools.build.bundletool.androidtools.Aapt2Command
 import com.android.tools.build.bundletool.commands.BuildApksCommand
 import com.android.tools.build.bundletool.model.SigningConfiguration
+import org.gradle.api.artifacts.verification.DependencyVerificationMode
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.nio.file.Paths
 import java.security.KeyFactory
@@ -84,9 +85,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("CMakeLists.txt")
+    // Configuring the native build makes AGP download and set up the NDK, which causes Renovate
+    // dependency verification metadata updates to fail since NDK licenses aren't accepted in
+    // Renovate's environment.
+    //
+    // We don't need the native build to resolve dependencies, so skip it when updating dependency
+    // verification metadata so Renovate updates work.
+    if (gradle.startParameter.dependencyVerificationMode != DependencyVerificationMode.LENIENT) {
+        externalNativeBuild {
+            cmake {
+                path = file("CMakeLists.txt")
+            }
         }
     }
 

@@ -27,7 +27,7 @@ protovalidate = "1.3.0"
 rest-assured = "6.3.0"
 slf4j = "2.0.20"
 slf4j-jboss-logmanager = "2.1.0.Final"
-smallrye-config = "4.0.0"
+smallrye-config = "4.1.0"
 testcontainers = "2.0.5"
 vertx = "5.2.2"
 

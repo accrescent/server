@@ -6,7 +6,7 @@
 agp = "9.4.1"
 apksig = "9.4.1"
 appstore-api = "1.5.0.4.20260925233938.cd9cbc3ac813"
-arrow = "2.2.3"
+arrow = "2.3.0"
 binary-resources = "32.5.0"
 bundletool = "1.18.3"
 cloud-sql-connector = "1.30.2"

@@ -8,7 +8,7 @@ import app.accrescent.server.UNIX_EPOCH
 import app.accrescent.server.adapters.driven.datastore2.vertx.MemoryDataStore
 import app.accrescent.server.adapters.driven.randomsource.DeterministicRandomSource
 import app.accrescent.server.adapters.driven.timestampsource.FixedTimestampSource
-import app.accrescent.server.core.NonNegativeLong
+import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.core.unwrap2
 import app.accrescent.server.core.unwrapErr
@@ -131,7 +131,7 @@ class ConsoleApiImplTest {
             val response = consoleApi.getOrganization(context, GetOrganizationRequest(organizationId))
 
             assertEquals(
-                NonNegativeLong.MIN_VALUE,
+                NonNegativeInt.MIN_VALUE,
                 response.unwrap().organization.activeAppDraftCount,
             )
         }
@@ -221,10 +221,10 @@ class ConsoleApiImplTest {
                 GetOrganizationResponse(
                     Organization(
                         id = "org_1uMy9o9BqyoxomLjIEbctU",
-                        publishedAppLimit = NonNegativeLong.new(1).unwrap(),
-                        publishedAppCount = NonNegativeLong.MIN_VALUE,
-                        activeAppDraftLimit = NonNegativeLong.new(3).unwrap(),
-                        activeAppDraftCount = NonNegativeLong.MIN_VALUE,
+                        publishedAppLimit = NonNegativeInt.new(1).unwrap(),
+                        publishedAppCount = NonNegativeInt.MIN_VALUE,
+                        activeAppDraftLimit = NonNegativeInt.new(3).unwrap(),
+                        activeAppDraftCount = NonNegativeInt.MIN_VALUE,
                     ),
                 ),
                 response.unwrap(),
@@ -245,7 +245,7 @@ class ConsoleApiImplTest {
             val response = consoleApi.getOrganization(context, GetOrganizationRequest(organizationId))
 
             assertEquals(
-                NonNegativeLong.new(2).unwrap(),
+                NonNegativeInt.new(2).unwrap(),
                 response.unwrap().organization.activeAppDraftCount,
             )
         }

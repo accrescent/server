@@ -4,7 +4,7 @@
 
 package app.accrescent.server.adapters.driving.api.console.grpc
 
-import app.accrescent.server.core.NonNegativeLong
+import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
@@ -75,10 +75,10 @@ class MessageConvertersTest {
         val domain = GetOrganizationResponse(
             Organization(
                 id = "org1",
-                publishedAppLimit = NonNegativeLong.new(2).unwrap(),
-                publishedAppCount = NonNegativeLong.new(1).unwrap(),
-                activeAppDraftLimit = NonNegativeLong.new(4).unwrap(),
-                activeAppDraftCount = NonNegativeLong.new(3).unwrap(),
+                publishedAppLimit = NonNegativeInt.new(2).unwrap(),
+                publishedAppCount = NonNegativeInt.new(1).unwrap(),
+                activeAppDraftLimit = NonNegativeInt.new(4).unwrap(),
+                activeAppDraftCount = NonNegativeInt.new(3).unwrap(),
             )
         )
         val proto = getOrganizationResponse {

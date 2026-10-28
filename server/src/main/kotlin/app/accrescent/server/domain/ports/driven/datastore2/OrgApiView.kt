@@ -4,7 +4,7 @@
 
 package app.accrescent.server.domain.ports.driven.datastore2
 
-import app.accrescent.server.core.NonNegativeLong
+import app.accrescent.server.core.NonNegativeInt
 
 /**
  * The view of an organization exposed through the API.
@@ -15,6 +15,6 @@ import app.accrescent.server.core.NonNegativeLong
  */
 data class OrgApiView(
     val id: String,
-    val publishedAppCount: NonNegativeLong,
-    val activeAppDraftCount: NonNegativeLong,
+    val publishedAppCount: NonNegativeInt,
+    val activeAppDraftCount: NonNegativeInt,
 )

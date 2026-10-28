@@ -5,7 +5,7 @@
 package app.accrescent.server.adapters.driven.datastore2.vertx
 
 import app.accrescent.server.core.Error
-import app.accrescent.server.core.NonNegativeLong
+import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.causedBy
 import app.accrescent.server.core.downcast
 import app.accrescent.server.core.toEitherBind
@@ -33,20 +33,20 @@ inline fun <reified T : Any> Row.requireValue(columnIndex: Int): T {
 }
 
 /**
- * Gets a required row value of SQL type `bigint` as a [NonNegativeLong].
+ * Gets a required row value of SQL type `integer` as a [NonNegativeInt].
  *
- * Raises [DataStoreError.IllegalState] if the fetched value is `null`, not of type [Long], or
+ * Raises [DataStoreError.IllegalState] if the fetched value is `null`, not of type [Int], or
  * negative.
  *
  * @return the value fetched from the database.
  */
 context(_: Raise<DataStoreError>)
-fun Row.requireNonNegativeLong(columnIndex: Int): NonNegativeLong {
-    val value = requireValue<Long>(columnIndex)
+fun Row.requireNonNegativeInt(columnIndex: Int): NonNegativeInt {
+    val value = requireValue<Int>(columnIndex)
 
-    return NonNegativeLong.new(value).toEitherBind {
+    return NonNegativeInt.new(value).toEitherBind {
         DataStoreError.IllegalState()
-            .causedBy(ColumnValueOutOfRange(columnIndex, value, NonNegativeLong::class))
+            .causedBy(ColumnValueOutOfRange(columnIndex, value, NonNegativeInt::class))
     }
 }
 
@@ -77,7 +77,7 @@ inline fun <reified T : Any> Row.getSafeValue(columnIndex: Int): Option<T> {
  * @param value the value fetched from the database.
  * @param target the type the value was converted to.
  */
-class ColumnValueOutOfRange(columnIndex: Int, value: Long, target: KClass<*>) : Error() {
+class ColumnValueOutOfRange(columnIndex: Int, value: Int, target: KClass<*>) : Error() {
     override val message =
         "expected column $columnIndex to be in the range of type ${target.qualifiedName}, but " +
                 "it was $value"

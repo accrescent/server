@@ -5,7 +5,7 @@
 package app.accrescent.server.adapters.driven.datastore2.vertx
 
 import app.accrescent.server.core.NonEmptyString
-import app.accrescent.server.core.NonNegativeLong
+import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.ThrowableError
 import app.accrescent.server.core.causedBy
 import app.accrescent.server.core.unwrap
@@ -155,13 +155,13 @@ private class PostgresqlTransaction(
 ) : DataStore.Transaction() {
     override suspend fun countAppDraftsInOrg(
         organizationId: String,
-    ): DataStoreResult<NonNegativeLong> = either {
+    ): DataStoreResult<NonNegativeInt> = either {
         connection
             .executeSingleQuery(
-                "SELECT COUNT(*) FROM app_drafts WHERE organization_id = ?",
+                "SELECT CAST(COUNT(*) AS INTEGER) FROM app_drafts WHERE organization_id = ?",
                 Tuple.of(organizationId),
             )
-            .requireNonNegativeLong(0)
+            .requireNonNegativeInt(0)
     }
 
     override suspend fun createAppDraft(
@@ -238,7 +238,11 @@ private class PostgresqlTransaction(
             """
                 SELECT
                     id,
-                    (SELECT COUNT(*) FROM app_drafts WHERE organization_id = organizations.id)
+                    (
+                        SELECT CAST(COUNT(*) AS INTEGER)
+                        FROM app_drafts
+                        WHERE organization_id = organizations.id
+                    )
                 FROM organizations
                 WHERE id = ?
             """.trimIndent(),
@@ -248,9 +252,9 @@ private class PostgresqlTransaction(
                 OrgApiView(
                     id = it.requireValue<String>(0),
                     // Apps aren't stored yet, so organizations never have any published
-                    publishedAppCount = NonNegativeLong.MIN_VALUE,
+                    publishedAppCount = NonNegativeInt.MIN_VALUE,
                     // App drafts can't be reviewed yet, so all of them are active
-                    activeAppDraftCount = it.requireNonNegativeLong(1),
+                    activeAppDraftCount = it.requireNonNegativeInt(1),
                 )
             }
     }

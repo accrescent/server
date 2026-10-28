@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 [versions]
-agp = "9.4.1"
+agp = "9.5.0"
 apksig = "9.5.0"
 appstore-api = "1.5.0.4.20260925233938.cd9cbc3ac813"
 arrow = "2.2.3"

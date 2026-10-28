@@ -58,4 +58,17 @@ interface ConsoleApi {
      * @param context the context for this call.
      */
     suspend fun getSelf(context: CallContext): Either<GetSelfError, GetSelfResponse>
+
+    /**
+     * Lists app draft summaries for a given organization.
+     *
+     * App draft summaries are listed from newest to oldest.
+     *
+     * @param context the context for this call.
+     * @param request the request parameters.
+     */
+    suspend fun listAppDraftSummaries(
+        context: CallContext,
+        request: ListAppDraftSummariesRequest,
+    ): Either<ListAppDraftSummariesError, ListAppDraftSummariesResponse>
 }

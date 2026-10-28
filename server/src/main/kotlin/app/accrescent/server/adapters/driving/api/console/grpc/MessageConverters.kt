@@ -4,6 +4,9 @@
 
 package app.accrescent.server.adapters.driving.api.console.grpc
 
+import app.accrescent.server.core.PositiveInt
+import app.accrescent.server.core.unwrap
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
@@ -11,13 +14,21 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganization
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfResponse
+import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesRequest
+import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesResponse
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
+import arrow.core.None
+import arrow.core.Some
+import arrow.core.some
+import build.buf.gen.accrescent.console.v1.appDraftSummary
 import build.buf.gen.accrescent.console.v1.createAppDraftResponse
 import build.buf.gen.accrescent.console.v1.getMyOrganizationResponse
 import build.buf.gen.accrescent.console.v1.getOrganizationResponse
 import build.buf.gen.accrescent.console.v1.getSelfResponse
+import build.buf.gen.accrescent.console.v1.listAppDraftSummariesResponse
 import build.buf.gen.accrescent.console.v1.organization
 import build.buf.gen.accrescent.console.v1.user
+import build.buf.gen.accrescent.console.v1.AppDraftSummary as AppDraftSummaryProto
 import build.buf.gen.accrescent.console.v1.CreateAppDraftRequest as CreateAppDraftRequestProto
 import build.buf.gen.accrescent.console.v1.CreateAppDraftResponse as CreateAppDraftResponseProto
 import build.buf.gen.accrescent.console.v1.DeleteAppDraftRequest as DeleteAppDraftRequestProto
@@ -25,6 +36,8 @@ import build.buf.gen.accrescent.console.v1.GetMyOrganizationResponse as GetMyOrg
 import build.buf.gen.accrescent.console.v1.GetOrganizationRequest as GetOrganizationRequestProto
 import build.buf.gen.accrescent.console.v1.GetOrganizationResponse as GetOrganizationResponseProto
 import build.buf.gen.accrescent.console.v1.GetSelfResponse as GetSelfResponseProto
+import build.buf.gen.accrescent.console.v1.ListAppDraftSummariesRequest as ListAppDraftSummariesRequestProto
+import build.buf.gen.accrescent.console.v1.ListAppDraftSummariesResponse as ListAppDraftSummariesResponseProto
 import build.buf.gen.accrescent.console.v1.UserRole as UserRoleProto
 
 fun toDomain(request: CreateAppDraftRequestProto): CreateAppDraftRequest {
@@ -37,6 +50,19 @@ fun toDomain(request: DeleteAppDraftRequestProto): DeleteAppDraftRequest {
 
 fun toDomain(request: GetOrganizationRequestProto): GetOrganizationRequest {
     return GetOrganizationRequest(request.organizationId)
+}
+
+fun toDomain(request: ListAppDraftSummariesRequestProto): ListAppDraftSummariesRequest {
+    return ListAppDraftSummariesRequest(
+        organizationId = request.organizationId,
+        pageSize = if (request.hasPageSize()) {
+            // Request validation guarantees the page size is positive if set
+            PositiveInt.new(request.pageSize).unwrap().some()
+        } else {
+            None
+        },
+        pageToken = if (request.hasPageToken()) Some(request.pageToken) else None,
+    )
 }
 
 fun toProto(response: CreateAppDraftResponse): CreateAppDraftResponseProto {
@@ -68,6 +94,25 @@ fun toProto(response: GetSelfResponse): GetSelfResponseProto {
         user = user {
             id = response.user.id
             roles += response.user.roles.map(::toProto)
+        }
+    }
+}
+
+fun toProto(response: ListAppDraftSummariesResponse): ListAppDraftSummariesResponseProto {
+    return listAppDraftSummariesResponse {
+        appDraftSummaries += response.appDraftSummaries.map(::toProto)
+        response.nextPageToken.onSome { nextPageToken = it }
+    }
+}
+
+private fun toProto(summary: AppDraftSummary): AppDraftSummaryProto {
+    return appDraftSummary {
+        id = summary.id
+        summary.name.onSome { name = it }
+        summary.iconUri.onSome { iconUri = it.intoString() }
+        summary.appPackage.onSome {
+            versionName = it.versionName.value
+            androidApplicationId = it.androidApplicationId.value
         }
     }
 }

@@ -11,6 +11,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganization
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
+import app.accrescent.server.domain.ports.driving.api.console2.InvalidPageTokenError
+import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesError
 import app.accrescent.server.domain.ports.driving.api.console2.ServerError
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
 import build.buf.gen.accrescent.console.v1.ErrorReason
@@ -86,6 +88,18 @@ class ErrorConvertersTest {
     }
 
     @ParameterizedTest
+    @MethodSource("toStatusCorrectlyConvertsListAppDraftSummariesErrorTestCases")
+    fun `toStatus correctly converts ListAppDraftSummariesError`(
+        testCase: ToStatusCorrectlyConvertsListAppDraftSummariesErrorTestCase,
+    ) {
+        val status = toStatus(testCase.error)
+
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
+        assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
+    }
+
+    @ParameterizedTest
     @MethodSource("toStatusCorrectlyConvertsServerErrorTestCases")
     fun `toStatus correctly converts ServerError`(
         testCase: ToStatusCorrectlyConvertsServerErrorTestCase,
@@ -124,6 +138,12 @@ class ErrorConvertersTest {
 
         data class ToStatusCorrectlyConvertsGetSelfErrorTestCase(
             val error: GetSelfError,
+            val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
+        )
+
+        data class ToStatusCorrectlyConvertsListAppDraftSummariesErrorTestCase(
+            val error: ListAppDraftSummariesError,
             val expectedCode: Code,
             val expectedErrorInfo: ErrorInfo,
         )
@@ -210,6 +230,28 @@ class ErrorConvertersTest {
                     UnauthenticatedError(),
                     Code.UNAUTHENTICATED,
                     errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
+                ),
+            )
+        }
+
+        @JvmStatic
+        private fun toStatusCorrectlyConvertsListAppDraftSummariesErrorTestCases():
+                List<ToStatusCorrectlyConvertsListAppDraftSummariesErrorTestCase> {
+            return listOf(
+                ToStatusCorrectlyConvertsListAppDraftSummariesErrorTestCase(
+                    UnauthenticatedError(),
+                    Code.UNAUTHENTICATED,
+                    errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
+                ),
+                ToStatusCorrectlyConvertsListAppDraftSummariesErrorTestCase(
+                    InsufficientPermissionError(),
+                    Code.PERMISSION_DENIED,
+                    errorInfo(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION),
+                ),
+                ToStatusCorrectlyConvertsListAppDraftSummariesErrorTestCase(
+                    InvalidPageTokenError(),
+                    Code.INVALID_ARGUMENT,
+                    errorInfo(ErrorReason.ERROR_REASON_INVALID_REQUEST),
                 ),
             )
         }

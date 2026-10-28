@@ -9,6 +9,7 @@ import app.accrescent.server.adapters.driven.datastore2.vertx.MemoryDataStore
 import app.accrescent.server.adapters.driven.randomsource.DeterministicRandomSource
 import app.accrescent.server.adapters.driven.timestampsource.FixedTimestampSource
 import app.accrescent.server.core.NonNegativeInt
+import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.core.unwrap2
 import app.accrescent.server.core.unwrapErr
@@ -19,6 +20,7 @@ import app.accrescent.server.domain.config.SessionLifetime
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
@@ -28,17 +30,27 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRe
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfResponse
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
+import app.accrescent.server.domain.ports.driving.api.console2.InvalidPageTokenError
+import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesRequest
+import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesResponse
 import app.accrescent.server.domain.ports.driving.api.console2.Organization
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
 import app.accrescent.server.domain.ports.driving.api.console2.User
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
+import app.accrescent.server.impl.v1.ListAppDraftSummariesPageToken
+import app.accrescent.server.impl.v1.listAppDraftSummariesPageToken
 import arrow.core.None
 import arrow.core.Some
+import com.google.protobuf.timestamp
 import io.vertx.core.Vertx
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
+import kotlin.io.encoding.Base64
 
 class ConsoleApiImplTest {
     @Test
@@ -301,8 +313,175 @@ class ConsoleApiImplTest {
         }
     }
 
+    @Test
+    suspend fun `listAppDraftSummaries returns Unauthenticated for unauthenticated request`() {
+        withMigratedDataStore { dataStore ->
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.listAppDraftSummaries(
+                CallContext(None),
+                ListAppDraftSummariesRequest("org_1uMy9o9BqyoxomLjIEbctU", None, None),
+            )
+
+            assertInstanceOf<UnauthenticatedError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `listAppDraftSummaries returns InsufficientPermission for unauthorized request`() {
+        withMigratedDataStore { dataStore ->
+            val idGenerator = IdGenerator(DeterministicRandomSource())
+            val context = signIn(dataStore, idGenerator = idGenerator)
+            val otherContext = signIn(
+                dataStore = dataStore,
+                externalUserId = ExternalUserId.Github(2),
+                idGenerator = idGenerator,
+            )
+            val consoleApi = makeConsoleApi(dataStore)
+            val otherOrganizationId = consoleApi
+                .getMyOrganization(otherContext)
+                .unwrap()
+                .organizationId
+
+            val response = consoleApi.listAppDraftSummaries(
+                context,
+                ListAppDraftSummariesRequest(otherOrganizationId, None, None),
+            )
+
+            assertInstanceOf<InsufficientPermissionError>(response.unwrapErr())
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidListAppDraftSummariesPageTokens")
+    suspend fun `listAppDraftSummaries returns InvalidPageToken for invalid page token`(
+        pageToken: String,
+    ) {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.listAppDraftSummaries(
+                context,
+                ListAppDraftSummariesRequest("org_1uMy9o9BqyoxomLjIEbctU", None, Some(pageToken)),
+            )
+
+            assertInstanceOf<InvalidPageTokenError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `listAppDraftSummaries returns next page token when page is full`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val organizationId = "org_1uMy9o9BqyoxomLjIEbctU"
+            consoleApi.createAppDraft(context, CreateAppDraftRequest(organizationId)).unwrap()
+
+            val response = consoleApi.listAppDraftSummaries(
+                context,
+                ListAppDraftSummariesRequest(
+                    organizationId = organizationId,
+                    pageSize = Some(PositiveInt.new(1).unwrap()),
+                    pageToken = None,
+                ),
+            )
+
+            assertTrue(response.unwrap().nextPageToken.isSome())
+        }
+    }
+
+    @Test
+    suspend fun `listAppDraftSummaries returns next page when given valid page token`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val organizationId = "org_1uMy9o9BqyoxomLjIEbctU"
+            val appDraftIds = List(3) {
+                consoleApi
+                    .createAppDraft(context, CreateAppDraftRequest(organizationId))
+                    .unwrap()
+                    .appDraftId
+            }
+            val pageSize = Some(PositiveInt.new(2).unwrap())
+            val firstPage = consoleApi
+                .listAppDraftSummaries(
+                    context,
+                    ListAppDraftSummariesRequest(organizationId, pageSize, None),
+                )
+                .unwrap()
+            val remainingAppDraftId =
+                (appDraftIds - firstPage.appDraftSummaries.map { it.id }.toSet()).single()
+
+            val response = consoleApi.listAppDraftSummaries(
+                context,
+                ListAppDraftSummariesRequest(organizationId, pageSize, firstPage.nextPageToken),
+            )
+
+            assertEquals(
+                ListAppDraftSummariesResponse(
+                    appDraftSummaries = listOf(
+                        AppDraftSummary(remainingAppDraftId, None, None, None),
+                    ),
+                    nextPageToken = None,
+                ),
+                response.unwrap(),
+            )
+        }
+    }
+
     private companion object {
         private val vertx = Vertx.vertx()
+
+        @JvmStatic
+        private fun invalidListAppDraftSummariesPageTokens(): List<String> {
+            val validCreateTime = timestamp { seconds = 0 }
+
+            return listOf(
+                // Invalid base64
+                "!",
+                // Invalid protobuf
+                Base64.UrlSafe.encode(byteArrayOf(-1)),
+                // Missing create time
+                encodePageToken(listAppDraftSummariesPageToken { lastAppDraftId = "draft1" }),
+                // Missing app draft ID
+                encodePageToken(
+                    listAppDraftSummariesPageToken { lastAppDraftCreateTime = validCreateTime },
+                ),
+                // Create time before 0001-01-01T00:00:00Z
+                encodePageToken(
+                    listAppDraftSummariesPageToken {
+                        lastAppDraftCreateTime = timestamp { seconds = -62_135_596_801 }
+                        lastAppDraftId = "draft1"
+                    },
+                ),
+                // Create time after 9999-12-31T23:59:59.999999999Z
+                encodePageToken(
+                    listAppDraftSummariesPageToken {
+                        lastAppDraftCreateTime = timestamp { seconds = 253_402_300_800 }
+                        lastAppDraftId = "draft1"
+                    },
+                ),
+                // Negative nanos
+                encodePageToken(
+                    listAppDraftSummariesPageToken {
+                        lastAppDraftCreateTime = timestamp { nanos = -1 }
+                        lastAppDraftId = "draft1"
+                    },
+                ),
+                // Nanos more than 999,999,999
+                encodePageToken(
+                    listAppDraftSummariesPageToken {
+                        lastAppDraftCreateTime = timestamp { nanos = 1_000_000_000 }
+                        lastAppDraftId = "draft1"
+                    }
+                ),
+            )
+        }
+
+        private fun encodePageToken(token: ListAppDraftSummariesPageToken): String {
+            return Base64.UrlSafe.encode(token.toByteArray())
+        }
 
         @AfterAll
         @JvmStatic
@@ -340,15 +519,16 @@ class ConsoleApiImplTest {
         private suspend fun signIn(
             dataStore: DataStore,
             timestampSource: TimestampSource = FixedTimestampSource(),
+            externalUserId: ExternalUserId = ExternalUserId.Github(1),
+            idGenerator: IdGenerator = IdGenerator(DeterministicRandomSource()),
         ): CallContext {
             val authenticationApi = AuthenticationApiImpl(
                 dataStore = dataStore,
-                idGenerator = IdGenerator(DeterministicRandomSource()),
+                idGenerator = idGenerator,
                 sessionLifetime = SessionLifetime.parse("24h").unwrap(),
                 timestampSource = timestampSource,
             )
-            val sessionId =
-                authenticationApi.createSession(ExternalUserId.Github(1)).unwrap().sessionId
+            val sessionId = authenticationApi.createSession(externalUserId).unwrap().sessionId
 
             return CallContext(Some(sessionId))
         }

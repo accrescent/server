@@ -12,6 +12,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganization
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
+import app.accrescent.server.domain.ports.driving.api.console2.InvalidPageTokenError
+import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesError
 import app.accrescent.server.domain.ports.driving.api.console2.ServerError
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
 import build.buf.gen.accrescent.console.v1.ErrorReason
@@ -65,6 +67,17 @@ fun toStatus(error: GetOrganizationError): Status {
 fun toStatus(error: GetSelfError): Status {
     return when (error) {
         is UnauthenticatedError -> status(ErrorReason.ERROR_REASON_UNAUTHENTICATED, error)
+        is ServerError -> toStatus(error)
+    }
+}
+
+fun toStatus(error: ListAppDraftSummariesError): Status {
+    return when (error) {
+        is UnauthenticatedError -> status(ErrorReason.ERROR_REASON_UNAUTHENTICATED, error)
+        is InsufficientPermissionError ->
+            status(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION, error)
+
+        is InvalidPageTokenError -> status(ErrorReason.ERROR_REASON_INVALID_REQUEST, error)
         is ServerError -> toStatus(error)
     }
 }

@@ -6,6 +6,7 @@ package app.accrescent.server.domain.ports.driven.datastore2
 
 import app.accrescent.server.UNIX_EPOCH
 import app.accrescent.server.core.NonNegativeInt
+import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.core.unwrap2
 import app.accrescent.server.core.unwrapErr
@@ -657,6 +658,118 @@ abstract class DataStoreConformanceTest {
         }
     }
 
+    @Test
+    suspend fun `listAppDraftSummaryApiViewsInOrg lists app draft summaries in org from newest to oldest tied by ID`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createOrgWithOwner("org2", "user2", ExternalUserId.Github(2), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraft("draft2", "org1", UNIX_EPOCH.plusSeconds(1)).bind()
+                tx.createAppDraft("draft3", "org1", UNIX_EPOCH.plusSeconds(1)).bind()
+                tx.createAppDraft("draft4", "org2", UNIX_EPOCH.plusSeconds(2)).bind()
+            }
+                .unwrap2()
+
+            val appDraftSummaries = dataStore
+                .runInTransaction { tx ->
+                    tx
+                        .listAppDraftSummaryApiViewsInOrg("org1", PositiveInt.new(3).unwrap(), None)
+                        .bind()
+                }
+                .unwrap2()
+
+            assertEquals(
+                listOf(
+                    AppDraftSummaryApiView("draft3", UNIX_EPOCH.plusSeconds(1)),
+                    AppDraftSummaryApiView("draft2", UNIX_EPOCH.plusSeconds(1)),
+                    AppDraftSummaryApiView("draft1", UNIX_EPOCH),
+                ),
+                appDraftSummaries,
+            )
+        }
+    }
+
+    @Test
+    suspend fun `listAppDraftSummaryApiViewsInOrg returns max results when more items match`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraft("draft2", "org1", UNIX_EPOCH.plusSeconds(1)).bind()
+                tx.createAppDraft("draft3", "org1", UNIX_EPOCH.plusSeconds(2)).bind()
+            }
+                .unwrap2()
+
+            val appDraftSummaries = dataStore
+                .runInTransaction { tx ->
+                    tx
+                        .listAppDraftSummaryApiViewsInOrg("org1", PositiveInt.new(2).unwrap(), None)
+                        .bind()
+                }
+                .unwrap2()
+
+            assertEquals(
+                listOf(
+                    AppDraftSummaryApiView("draft3", UNIX_EPOCH.plusSeconds(2)),
+                    AppDraftSummaryApiView("draft2", UNIX_EPOCH.plusSeconds(1)),
+                ),
+                appDraftSummaries,
+            )
+        }
+    }
+
+    @Test
+    suspend fun `listAppDraftSummaryApiViewsInOrg lists only summaries after sort key`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraft("draft2", "org1", UNIX_EPOCH.plusSeconds(1)).bind()
+                tx.createAppDraft("draft3", "org1", UNIX_EPOCH.plusSeconds(1)).bind()
+                tx.createAppDraft("draft4", "org1", UNIX_EPOCH.plusSeconds(2)).bind()
+            }
+                .unwrap2()
+
+            val appDraftSummaries = dataStore
+                .runInTransaction { tx ->
+                    tx
+                        .listAppDraftSummaryApiViewsInOrg(
+                            organizationId = "org1",
+                            maxResults = PositiveInt.new(3).unwrap(),
+                            after = Some(
+                                AppDraftSummarySortKey(UNIX_EPOCH.plusSeconds(1), "draft3"),
+                            ),
+                        )
+                        .bind()
+                }
+                .unwrap2()
+
+            assertEquals(
+                listOf(
+                    AppDraftSummaryApiView("draft2", UNIX_EPOCH.plusSeconds(1)),
+                    AppDraftSummaryApiView("draft1", UNIX_EPOCH),
+                ),
+                appDraftSummaries,
+            )
+        }
+    }
+
+    @Test
+    suspend fun `listAppDraftSummaryApiViewsInOrg returns no items for non-existent organization`() {
+        withMigratedDataStore { dataStore ->
+            val appDraftSummaries = dataStore
+                .runInTransaction { tx ->
+                    tx
+                        .listAppDraftSummaryApiViewsInOrg("org1", PositiveInt.new(1).unwrap(), None)
+                        .bind()
+                }
+                .unwrap2()
+
+            assertEquals(emptyList<AppDraftSummaryApiView>(), appDraftSummaries)
+        }
+    }
+
     companion object {
         data class HasPermissionReturnsTrueWithMinimalRelationships(
             val hasPermissionRequest: HasPermissionRequest,
@@ -679,6 +792,13 @@ abstract class DataStoreConformanceTest {
                 either {
                     tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
                     tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                }
+            },
+            HasPermissionReturnsTrueWithMinimalRelationships(
+                HasPermissionRequest.ViewAppDrafts("org1", "user1"),
+            ) { tx ->
+                either {
+                    tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
                 }
             },
             HasPermissionReturnsTrueWithMinimalRelationships(

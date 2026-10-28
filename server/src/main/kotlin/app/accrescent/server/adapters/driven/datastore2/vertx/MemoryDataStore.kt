@@ -5,10 +5,13 @@
 package app.accrescent.server.adapters.driven.datastore2.vertx
 
 import app.accrescent.server.core.NonNegativeInt
+import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.ThrowableError
 import app.accrescent.server.core.causedBy
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.crypto.Sha256Hash
+import app.accrescent.server.domain.ports.driven.datastore2.AppDraftSummaryApiView
+import app.accrescent.server.domain.ports.driven.datastore2.AppDraftSummarySortKey
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreError
 import app.accrescent.server.domain.ports.driven.datastore2.DataStoreResult
@@ -17,6 +20,7 @@ import app.accrescent.server.domain.ports.driven.datastore2.OrgApiView
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option
+import arrow.core.Some
 import arrow.core.left
 import arrow.core.raise.Raise
 import arrow.core.raise.either
@@ -253,6 +257,7 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
     ): DataStoreResult<Boolean> = either {
         val sql = when (request) {
             is HasPermissionRequest.CreateAppDraft,
+            is HasPermissionRequest.ViewAppDrafts,
             is HasPermissionRequest.ViewOrganization ->
                 "SELECT EXISTS(SELECT 1 FROM organizations WHERE id = ? AND owner_user_id = ?)"
 
@@ -271,6 +276,57 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
             .executeSingleQuery(sql, Tuple.of(request.resourceId, request.subjectId))
             .requireValue<Boolean>(0)
     }
+
+    override suspend fun listAppDraftSummaryApiViewsInOrg(
+        organizationId: String,
+        maxResults: PositiveInt,
+        after: Option<AppDraftSummarySortKey>,
+    ): DataStoreResult<List<AppDraftSummaryApiView>> = either {
+        val rows = when (after) {
+            is None -> connection.executeQuery(
+                """
+                    SELECT id, create_time
+                    FROM app_drafts
+                    WHERE organization_id = ?
+                    ORDER BY create_time DESC, id DESC
+                    LIMIT ?
+                """.trimIndent(),
+                Tuple.of(organizationId, maxResults.value),
+            )
+
+            is Some -> connection.executeQuery(
+                """
+                    SELECT id, create_time
+                    FROM app_drafts
+                    WHERE organization_id = ? AND (create_time, id) < (?, ?)
+                    ORDER BY create_time DESC, id DESC
+                    LIMIT ?
+                """.trimIndent(),
+                Tuple.of(organizationId, after.value.createTime, after.value.id, maxResults.value),
+            )
+        }
+
+        rows.map {
+            AppDraftSummaryApiView(
+                id = it.requireValue<String>(0),
+                createTime = it.requireValue<OffsetDateTime>(1),
+            )
+        }
+    }
+}
+
+/**
+ * Executes a query which may return any number of rows.
+ *
+ * Shorthand for [executeQuery] using H2's error mapping.
+ *
+ * @param sql the SQL query to execute.
+ * @param params the query's parameters.
+ * @return the rows returned by the query.
+ */
+context(_: Raise<DataStoreError>)
+private suspend fun SqlConnection.executeQuery(sql: String, params: Tuple): List<Row> {
+    return executeQuery(sql, params, Throwable::toDataStoreError)
 }
 
 /**

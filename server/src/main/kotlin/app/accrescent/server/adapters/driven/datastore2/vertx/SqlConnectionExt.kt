@@ -18,6 +18,27 @@ import io.vertx.sqlclient.SqlConnection
 import io.vertx.sqlclient.Tuple
 
 /**
+ * Executes a query which may return any number of rows.
+ *
+ * @param sql the SQL query to execute.
+ * @param params the query's parameters.
+ * @param mapError converter from exceptions thrown during execution to [DataStoreError].
+ * @return the rows returned by the query.
+ */
+context(raise: Raise<DataStoreError>)
+suspend fun SqlConnection.executeQuery(
+    sql: String,
+    params: Tuple,
+    mapError: (Throwable) -> DataStoreError,
+): List<Row> {
+    val rows = catch({ preparedQuery(sql).execute(params).coAwait() }) {
+        raise.raise(mapError(it))
+    }
+
+    return rows.toList()
+}
+
+/**
  * Executes a query which should return at most one row.
  *
  * Raises [DataStoreError.IllegalState] if any number of rows are returned other than zero or one.

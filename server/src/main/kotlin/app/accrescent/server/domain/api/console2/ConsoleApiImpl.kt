@@ -5,15 +5,18 @@
 package app.accrescent.server.domain.api.console2
 
 import app.accrescent.server.core.NonNegativeInt
+import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.bindMapLeft
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.IdGenerator
 import app.accrescent.server.domain.IdType
 import app.accrescent.server.domain.authn.ExternalUserId
+import app.accrescent.server.domain.ports.driven.datastore2.AppDraftSummarySortKey
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.HasPermissionRequest
 import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
@@ -29,13 +32,28 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRe
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfResponse
 import app.accrescent.server.domain.ports.driving.api.console2.InsufficientPermissionError
+import app.accrescent.server.domain.ports.driving.api.console2.InvalidPageTokenError
+import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesError
+import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesRequest
+import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesResponse
 import app.accrescent.server.domain.ports.driving.api.console2.Organization
 import app.accrescent.server.domain.ports.driving.api.console2.User
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
+import app.accrescent.server.impl.v1.ListAppDraftSummariesPageToken
+import app.accrescent.server.impl.v1.listAppDraftSummariesPageToken
 import arrow.core.Either
+import arrow.core.None
+import arrow.core.Option
+import arrow.core.Some
 import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.raise.ensure
+import com.google.protobuf.InvalidProtocolBufferException
+import com.google.protobuf.timestamp
+import com.google.protobuf.util.Timestamps
+import java.time.Instant
+import java.time.ZoneOffset
+import kotlin.io.encoding.Base64
 
 /**
  * Primary implementation of [ConsoleApi].
@@ -173,8 +191,100 @@ class ConsoleApiImpl(
         GetSelfResponse(user)
     }
 
+    override suspend fun listAppDraftSummaries(
+        context: CallContext,
+        request: ListAppDraftSummariesRequest,
+    ): Either<ListAppDraftSummariesError, ListAppDraftSummariesResponse> = either {
+        val pageSize = request.pageSize.getOrElse { DEFAULT_PAGE_SIZE }.coerceAtMost(MAX_PAGE_SIZE)
+        val after = request.pageToken.map { pageToken ->
+            decodeListAppDraftSummariesPageToken(pageToken)
+                .getOrElse { raise(InvalidPageTokenError()) }
+        }
+        val currentTime = timestampSource.now()
+
+        val appDraftSummaries = dataStore.runInTransaction { tx ->
+            val userId = authenticateCaller(tx, context.sessionId, currentTime)
+
+            val hasPermission = tx
+                .hasPermission(HasPermissionRequest.ViewAppDrafts(request.organizationId, userId))
+                .bindMapLeft(::toServerError)
+            ensure(hasPermission, ::InsufficientPermissionError)
+
+            tx
+                .listAppDraftSummaryApiViewsInOrg(request.organizationId, pageSize, after)
+                .bindMapLeft(::toServerError)
+        }
+            .bindMapLeft(::toServerError)
+            .bind()
+
+        // Return a page token if we haven't definitely reached the end of the collection
+        val nextPageToken = if (appDraftSummaries.size == pageSize.value) {
+            val lastAppDraftSummary = appDraftSummaries.last()
+            val nextPageAfter = AppDraftSummarySortKey(
+                createTime = lastAppDraftSummary.createTime,
+                id = lastAppDraftSummary.id,
+            )
+            Some(encodeListAppDraftSummariesPageToken(nextPageAfter))
+        } else {
+            None
+        }
+
+        ListAppDraftSummariesResponse(
+            appDraftSummaries = appDraftSummaries.map {
+                // App drafts can't have listings or packages yet, so don't set those fields yet
+                AppDraftSummary(it.id, None, None, None)
+            },
+            nextPageToken = nextPageToken,
+        )
+    }
+
     private companion object {
         private val ACTIVE_APP_DRAFT_LIMIT = NonNegativeInt.new(3).unwrap()
+        private val DEFAULT_PAGE_SIZE = PositiveInt.new(50).unwrap()
+        private val MAX_PAGE_SIZE = PositiveInt.new(50).unwrap()
         private val PUBLISHED_APP_LIMIT = NonNegativeInt.new(1).unwrap()
     }
+}
+
+private fun encodeListAppDraftSummariesPageToken(after: AppDraftSummarySortKey): String {
+    val token = listAppDraftSummariesPageToken {
+        lastAppDraftCreateTime = timestamp {
+            seconds = after.createTime.toEpochSecond()
+            nanos = after.createTime.nano
+        }
+        lastAppDraftId = after.id
+    }
+
+    return Base64.UrlSafe.encode(token.toByteArray())
+}
+
+private fun decodeListAppDraftSummariesPageToken(
+    pageToken: String,
+): Option<AppDraftSummarySortKey> {
+    val token = try {
+        ListAppDraftSummariesPageToken.parseFrom(Base64.UrlSafe.decode(pageToken))
+    } catch (_: IllegalArgumentException) {
+        return None
+    } catch (_: InvalidProtocolBufferException) {
+        return None
+    }
+    if (!token.hasLastAppDraftCreateTime() || !token.hasLastAppDraftId()) {
+        return None
+    }
+
+    // Reject invalid timestamps so that clients can't pass ones which can't be represented in our
+    // domain or DataStore backends
+    val createTime = token.lastAppDraftCreateTime
+    if (!Timestamps.isValid(createTime)) {
+        return None
+    }
+
+    return Some(
+        AppDraftSummarySortKey(
+            createTime = Instant
+                .ofEpochSecond(createTime.seconds, createTime.nanos.toLong())
+                .atOffset(ZoneOffset.UTC),
+            id = token.lastAppDraftId,
+        ),
+    )
 }

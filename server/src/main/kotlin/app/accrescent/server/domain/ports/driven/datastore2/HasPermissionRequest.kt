@@ -30,6 +30,15 @@ sealed class HasPermissionRequest(val resourceId: String, val subjectId: String)
         HasPermissionRequest(appDraftId, userId)
 
     /**
+     * The permission to view the app drafts in an organization.
+     *
+     * @param organizationId the ID of the organization to list the app drafts of.
+     * @param userId the ID of the user to check the permission of.
+     */
+    data class ViewAppDrafts(private val organizationId: String, private val userId: String) :
+        HasPermissionRequest(organizationId, userId)
+
+    /**
      * The permission to view an organization.
      *
      * @param organizationId the ID of the organization to view.

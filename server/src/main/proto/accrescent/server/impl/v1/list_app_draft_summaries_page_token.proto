@@ -1,0 +1,23 @@
+// SPDX-FileCopyrightText: © 2026 Logan Magee
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
+syntax = "proto3";
+
+package accrescent.server.impl.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "app.accrescent.server.impl.v1";
+
+// A "next page" token returned in ListAppDraftSummariesResponse.
+message ListAppDraftSummariesPageToken {
+  // The creation timestamp of the last app draft returned in the
+  // ListAppDraftSummariesResponse. Required.
+  optional google.protobuf.Timestamp last_app_draft_create_time = 1;
+
+  // The ID of the last app draft returned in the ListAppDraftSummariesResponse.
+  // Required.
+  optional string last_app_draft_id = 2;
+}

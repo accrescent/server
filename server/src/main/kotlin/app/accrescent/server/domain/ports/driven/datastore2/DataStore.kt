@@ -6,6 +6,7 @@ package app.accrescent.server.domain.ports.driven.datastore2
 
 import app.accrescent.server.core.Error
 import app.accrescent.server.core.NonNegativeInt
+import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.crypto.Sha256Hash
 import arrow.core.Either
@@ -246,6 +247,25 @@ interface DataStore {
          * @return whether the permission is granted.
          */
         abstract suspend fun hasPermission(request: HasPermissionRequest): DataStoreResult<Boolean>
+
+        /**
+         * Lists the API views of the app draft summaries in an organization.
+         *
+         * App draft summaries are listed from newest to oldest as defined by
+         * [AppDraftSummarySortKey]. Exactly [maxResults] app draft summaries are returned if at
+         * least that many match.
+         *
+         * @param organizationId the ID of the organization to list the app draft summaries of.
+         * @param maxResults the maximum number of app draft summaries to return.
+         * @param after the sort key after which to return app draft summaries, or [None] to start
+         * with the first result.
+         * @return the matching app draft summaries.
+         */
+        abstract suspend fun listAppDraftSummaryApiViewsInOrg(
+            organizationId: String,
+            maxResults: PositiveInt,
+            after: Option<AppDraftSummarySortKey>,
+        ): DataStoreResult<List<AppDraftSummaryApiView>>
 
         /**
          * Finds the API view of an organization.

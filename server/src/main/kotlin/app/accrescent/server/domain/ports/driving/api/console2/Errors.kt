@@ -32,6 +32,11 @@ sealed interface GetOrganizationError
 sealed interface GetSelfError
 
 /**
+ * An error that can occur when listing app draft summaries.
+ */
+sealed interface ListAppDraftSummariesError
+
+/**
  * A server-side error that can occur in any console API method.
  */
 sealed class ServerError :
@@ -40,7 +45,8 @@ sealed class ServerError :
     DeleteAppDraftError,
     GetMyOrganizationError,
     GetOrganizationError,
-    GetSelfError {
+    GetSelfError,
+    ListAppDraftSummariesError {
     /**
      * The server encountered an unexpected internal error.
      */
@@ -70,8 +76,16 @@ class InsufficientPermissionError :
     Error(),
     CreateAppDraftError,
     DeleteAppDraftError,
-    GetOrganizationError {
+    GetOrganizationError,
+    ListAppDraftSummariesError {
     override val message = "insufficient permission"
+}
+
+/**
+ * The provided page token is invalid.
+ */
+class InvalidPageTokenError : Error(), ListAppDraftSummariesError {
+    override val message = "invalid page token"
 }
 
 /**
@@ -83,6 +97,7 @@ class UnauthenticatedError :
     DeleteAppDraftError,
     GetMyOrganizationError,
     GetOrganizationError,
-    GetSelfError {
+    GetSelfError,
+    ListAppDraftSummariesError {
     override val message = "unauthenticated"
 }

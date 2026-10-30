@@ -5,12 +5,9 @@
 package app.accrescent.server.adapters.driving.api.console.vertx
 
 import app.accrescent.server.adapters.driving.api.console.grpc.AppDraftServiceImpl
-import app.accrescent.server.adapters.driving.api.console.grpc.AppEditServiceImpl
-import app.accrescent.server.adapters.driving.api.console.grpc.AppServiceImpl
 import app.accrescent.server.adapters.driving.api.console.grpc.CallContextInterceptor
 import app.accrescent.server.adapters.driving.api.console.grpc.OrganizationServiceImpl
 import app.accrescent.server.adapters.driving.api.console.grpc.RequestValidationInterceptor
-import app.accrescent.server.adapters.driving.api.console.grpc.ReviewServiceImpl
 import app.accrescent.server.adapters.driving.api.console.grpc.UserServiceImpl
 import app.accrescent.server.adapters.driving.api.vertx.grpcServerOptions
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
@@ -71,10 +68,7 @@ private fun createServer(
     val options = grpcServerOptions(GrpcProtocol.WEB, WireFormat.PROTOBUF)
     val server = GrpcIoServer.server(vertx, options)
         .addInterceptedService(AppDraftServiceImpl(context, consoleApi))
-        .addInterceptedService(AppEditServiceImpl(context))
-        .addInterceptedService(AppServiceImpl(context))
         .addInterceptedService(OrganizationServiceImpl(context, consoleApi))
-        .addInterceptedService(ReviewServiceImpl(context))
         .addInterceptedService(UserServiceImpl(context, consoleApi))
 
     return server

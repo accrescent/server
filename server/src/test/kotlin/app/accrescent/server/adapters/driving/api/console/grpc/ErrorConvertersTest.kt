@@ -9,6 +9,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTe
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextError
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.EtagMismatchError
 import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
@@ -18,6 +19,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.InvalidPageTokenE
 import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesError
 import app.accrescent.server.domain.ports.driving.api.console2.ServerError
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextError
 import build.buf.gen.accrescent.console.v1.ErrorReason
 import com.google.rpc.Code
 import com.google.rpc.ErrorInfo
@@ -127,6 +129,18 @@ class ErrorConvertersTest {
     }
 
     @ParameterizedTest
+    @MethodSource("toStatusCorrectlyConvertsUpdateAppDraftListingTextErrorTestCases")
+    fun `toStatus correctly converts UpdateAppDraftListingTextError`(
+        testCase: ToStatusCorrectlyConvertsUpdateAppDraftListingTextErrorTestCase,
+    ) {
+        val status = toStatus(testCase.error)
+
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
+        assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
+    }
+
+    @ParameterizedTest
     @MethodSource("toStatusCorrectlyConvertsServerErrorTestCases")
     fun `toStatus correctly converts ServerError`(
         testCase: ToStatusCorrectlyConvertsServerErrorTestCase,
@@ -183,6 +197,12 @@ class ErrorConvertersTest {
 
         data class ToStatusCorrectlyConvertsListAppDraftSummariesErrorTestCase(
             val error: ListAppDraftSummariesError,
+            val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
+        )
+
+        data class ToStatusCorrectlyConvertsUpdateAppDraftListingTextErrorTestCase(
+            val error: UpdateAppDraftListingTextError,
             val expectedCode: Code,
             val expectedErrorInfo: ErrorInfo,
         )
@@ -330,6 +350,28 @@ class ErrorConvertersTest {
                     InvalidPageTokenError(),
                     Code.INVALID_ARGUMENT,
                     errorInfo(ErrorReason.ERROR_REASON_INVALID_REQUEST),
+                ),
+            )
+        }
+
+        @JvmStatic
+        private fun toStatusCorrectlyConvertsUpdateAppDraftListingTextErrorTestCases():
+                List<ToStatusCorrectlyConvertsUpdateAppDraftListingTextErrorTestCase> {
+            return listOf(
+                ToStatusCorrectlyConvertsUpdateAppDraftListingTextErrorTestCase(
+                    UnauthenticatedError(),
+                    Code.UNAUTHENTICATED,
+                    errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
+                ),
+                ToStatusCorrectlyConvertsUpdateAppDraftListingTextErrorTestCase(
+                    InsufficientPermissionError(),
+                    Code.PERMISSION_DENIED,
+                    errorInfo(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION),
+                ),
+                ToStatusCorrectlyConvertsUpdateAppDraftListingTextErrorTestCase(
+                    EtagMismatchError(),
+                    Code.ABORTED,
+                    errorInfo(ErrorReason.ERROR_REASON_ETAG_MISMATCH),
                 ),
             )
         }

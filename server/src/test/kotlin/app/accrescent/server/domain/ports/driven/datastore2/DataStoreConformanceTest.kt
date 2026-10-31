@@ -881,6 +881,199 @@ abstract class DataStoreConformanceTest {
         }
     }
 
+    @Test
+    suspend fun `updateAppDraftListingText updates all given fields`() {
+        withMigratedDataStore { dataStore ->
+            val etag = dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraftListingText("draft1", appName("Name"), shortDescription("Desc"))
+                    .bind()
+                    .unwrap()
+            }
+                .unwrap2()
+
+            val (newEtag, listingText) = dataStore.runInTransaction { tx ->
+                val newEtag = tx
+                    .updateAppDraftListingText(
+                        appDraftId = "draft1",
+                        etag = etag,
+                        name = Some(appName("New name")),
+                        shortDescription = Some(shortDescription("New desc")),
+                    )
+                    .bind()
+                    .unwrap()
+                val listingText = tx.findAppDraftListingTextApiViewByAppDraftId("draft1").bind()
+                newEtag to listingText
+            }
+                .unwrap2()
+
+            assertEquals(
+                Some(AppDraftListingTextApiView("New name", "New desc", newEtag)),
+                listingText,
+            )
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText leaves name unchanged when not given`() {
+        withMigratedDataStore { dataStore ->
+            val etag = dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraftListingText("draft1", appName("Name"), shortDescription("Desc"))
+                    .bind()
+                    .unwrap()
+            }
+                .unwrap2()
+
+            val (newEtag, listingText) = dataStore.runInTransaction { tx ->
+                val newEtag = tx
+                    .updateAppDraftListingText(
+                        appDraftId = "draft1",
+                        etag = etag,
+                        name = None,
+                        shortDescription = Some(shortDescription("New desc")),
+                    )
+                    .bind()
+                    .unwrap()
+                val listingText = tx.findAppDraftListingTextApiViewByAppDraftId("draft1").bind()
+                newEtag to listingText
+            }
+                .unwrap2()
+
+            assertEquals(
+                Some(AppDraftListingTextApiView("Name", "New desc", newEtag)),
+                listingText,
+            )
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText leaves short description unchanged when not given`() {
+        withMigratedDataStore { dataStore ->
+            val etag = dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraftListingText("draft1", appName("Name"), shortDescription("Desc"))
+                    .bind()
+                    .unwrap()
+            }
+                .unwrap2()
+
+            val (newEtag, listingText) = dataStore.runInTransaction { tx ->
+                val newEtag = tx
+                    .updateAppDraftListingText(
+                        appDraftId = "draft1",
+                        etag = etag,
+                        name = Some(appName("New name")),
+                        shortDescription = None,
+                    )
+                    .bind()
+                    .unwrap()
+                val listingText = tx.findAppDraftListingTextApiViewByAppDraftId("draft1").bind()
+                newEtag to listingText
+            }
+                .unwrap2()
+
+            assertEquals(
+                Some(AppDraftListingTextApiView("New name", "Desc", newEtag)),
+                listingText,
+            )
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText returns same etag as creating listing text with same content`() {
+        withMigratedDataStore { dataStore ->
+            val (etag, createdEtag) = dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraft("draft2", "org1", UNIX_EPOCH).bind()
+                val etag = tx
+                    .createAppDraftListingText("draft1", appName("Name"), shortDescription("Desc"))
+                    .bind()
+                    .unwrap()
+                val createdEtag = tx
+                    .createAppDraftListingText("draft2", appName("Other"), shortDescription("Desc"))
+                    .bind()
+                    .unwrap()
+                etag to createdEtag
+            }
+                .unwrap2()
+
+            val updatedEtag = dataStore.runInTransaction { tx ->
+                tx.updateAppDraftListingText("draft1", etag, Some(appName("Other")), None)
+                    .bind()
+                    .unwrap()
+            }
+                .unwrap2()
+
+            assertEquals(createdEtag, updatedEtag)
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText returns None and leaves listing text unchanged on etag mismatch`() {
+        withMigratedDataStore { dataStore ->
+            val etag = dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraftListingText("draft1", appName("Name"), shortDescription("Desc"))
+                    .bind()
+                    .unwrap()
+            }
+                .unwrap2()
+
+            val (newEtag, listingText) = dataStore.runInTransaction { tx ->
+                val newEtag = tx
+                    .updateAppDraftListingText(
+                        appDraftId = "draft1",
+                        etag = "wrong-etag",
+                        name = Some(appName("New name")),
+                        shortDescription = Some(shortDescription("New desc")),
+                    )
+                    .bind()
+                val listingText = tx.findAppDraftListingTextApiViewByAppDraftId("draft1").bind()
+                newEtag to listingText
+            }
+                .unwrap2()
+
+            assertEquals(None, newEtag)
+            assertEquals(Some(AppDraftListingTextApiView("Name", "Desc", etag)), listingText)
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText returns None for app draft without listing text`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            val etag = dataStore.runInTransaction { tx ->
+                tx.updateAppDraftListingText("draft1", "etag", Some(appName("Name")), None).bind()
+            }
+                .unwrap2()
+
+            assertEquals(None, etag)
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText returns None for non-existent app draft`() {
+        withMigratedDataStore { dataStore ->
+            val etag = dataStore.runInTransaction { tx ->
+                tx.updateAppDraftListingText("draft1", "etag", Some(appName("Name")), None).bind()
+            }
+                .unwrap2()
+
+            assertEquals(None, etag)
+        }
+    }
+
     companion object {
         data class HasPermissionReturnsTrueWithMinimalRelationships(
             val hasPermissionRequest: HasPermissionRequest,

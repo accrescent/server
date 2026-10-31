@@ -368,6 +368,32 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
             )
         }
     }
+
+    override suspend fun updateAppDraftListingText(
+        appDraftId: String,
+        etag: String,
+        name: Option<AppName>,
+        shortDescription: Option<AppShortDescription>,
+    ): DataStoreResult<Option<String>> = either {
+        connection.executeOptionalQuery(
+            """
+            SELECT etag
+            FROM FINAL TABLE (
+                UPDATE app_draft_listing_texts
+                SET name = COALESCE(?, name), short_description = COALESCE(?, short_description)
+                WHERE app_draft_id = ?
+                AND etag = ?
+            )
+            """.trimIndent(),
+            Tuple.of(
+                name.map { it.value }.getOrNull(),
+                shortDescription.map { it.value }.getOrNull(),
+                appDraftId,
+                etag,
+            ),
+        )
+            .map { it.requireValue<String>(0) }
+    }
 }
 
 /**

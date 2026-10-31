@@ -297,6 +297,24 @@ interface DataStore {
         ): DataStoreResult<List<AppDraftSummaryApiView>>
 
         /**
+         * Updates an app draft's listing text.
+         *
+         * @param appDraftId the ID of the app draft to update the listing text of.
+         * @param etag the expected content-based ETag of the listing text before the update.
+         * @param name the app's new name, or [None] to leave it unchanged.
+         * @param shortDescription the app's new short description, or [None] to leave it
+         * unchanged.
+         * @return a content-based ETag of the updated listing text, or [None] if the app draft
+         * doesn't exist or has no listing text with an ETag of [etag].
+         */
+        abstract suspend fun updateAppDraftListingText(
+            appDraftId: String,
+            etag: String,
+            name: Option<AppName>,
+            shortDescription: Option<AppShortDescription>,
+        ): DataStoreResult<Option<String>>
+
+        /**
          * Finds the API view of an organization.
          *
          * @param organizationId the ID of the organization to find.

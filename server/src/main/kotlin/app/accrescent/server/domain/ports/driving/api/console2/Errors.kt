@@ -47,6 +47,11 @@ sealed interface GetSelfError
 sealed interface ListAppDraftSummariesError
 
 /**
+ * An error that can occur when updating an app draft's listing text.
+ */
+sealed interface UpdateAppDraftListingTextError
+
+/**
  * A server-side error that can occur in any console API method.
  */
 sealed class ServerError :
@@ -58,7 +63,8 @@ sealed class ServerError :
     GetMyOrganizationError,
     GetOrganizationError,
     GetSelfError,
-    ListAppDraftSummariesError {
+    ListAppDraftSummariesError,
+    UpdateAppDraftListingTextError {
     /**
      * The server encountered an unexpected internal error.
      */
@@ -89,6 +95,13 @@ class AppDraftListingTextAlreadyExistsError : Error(), CreateAppDraftListingText
 }
 
 /**
+ * The provided etag does not match the resource's current etag.
+ */
+class EtagMismatchError : Error(), UpdateAppDraftListingTextError {
+    override val message = "etag mismatch"
+}
+
+/**
  * The caller does not have sufficient permission to perform the operation.
  */
 class InsufficientPermissionError :
@@ -98,7 +111,8 @@ class InsufficientPermissionError :
     DeleteAppDraftError,
     GetAppDraftDetailsError,
     GetOrganizationError,
-    ListAppDraftSummariesError {
+    ListAppDraftSummariesError,
+    UpdateAppDraftListingTextError {
     override val message = "insufficient permission"
 }
 
@@ -121,6 +135,7 @@ class UnauthenticatedError :
     GetMyOrganizationError,
     GetOrganizationError,
     GetSelfError,
-    ListAppDraftSummariesError {
+    ListAppDraftSummariesError,
+    UpdateAppDraftListingTextError {
     override val message = "unauthenticated"
 }

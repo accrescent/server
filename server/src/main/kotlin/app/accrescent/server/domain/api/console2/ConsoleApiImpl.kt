@@ -30,6 +30,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftReq
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
+import app.accrescent.server.domain.ports.driving.api.console2.EtagMismatchError
 import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsError
 import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsResponse
@@ -46,6 +47,9 @@ import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSumma
 import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesRequest
 import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesResponse
 import app.accrescent.server.domain.ports.driving.api.console2.Organization
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextError
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextRequest
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextResponse
 import app.accrescent.server.domain.ports.driving.api.console2.User
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
 import app.accrescent.server.impl.v1.ListAppDraftSummariesPageToken
@@ -305,6 +309,37 @@ class ConsoleApiImpl(
             },
             nextPageToken = nextPageToken,
         )
+    }
+
+    override suspend fun updateAppDraftListingText(
+        context: CallContext,
+        request: UpdateAppDraftListingTextRequest,
+    ): Either<UpdateAppDraftListingTextError, UpdateAppDraftListingTextResponse> = either {
+        val currentTime = timestampSource.now()
+        val etag = dataStore.runInTransaction { tx ->
+            val userId = authenticateCaller(tx, context.sessionId, currentTime)
+
+            val hasPermission = tx
+                .hasPermission(HasPermissionRequest.EditAppDraftListing(request.appDraftId, userId))
+                .bindMapLeft(::toServerError)
+            ensure(hasPermission, ::InsufficientPermissionError)
+
+            // Treat attempts to update nonexistent listing text as an etag mismatch since it
+            // technically is
+            tx
+                .updateAppDraftListingText(
+                    appDraftId = request.appDraftId,
+                    etag = request.etag,
+                    name = request.name,
+                    shortDescription = request.shortDescription,
+                )
+                .bindMapLeft(::toServerError)
+                .toEitherBind(::EtagMismatchError)
+        }
+            .bindMapLeft(::toServerError)
+            .bind()
+
+        UpdateAppDraftListingTextResponse(etag)
     }
 
     private companion object {

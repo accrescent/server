@@ -17,6 +17,7 @@ import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.HasPermissionRequest
 import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingText
 import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTextAlreadyExistsError
 import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
@@ -29,6 +30,9 @@ import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftReq
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
+import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsError
+import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsRequest
+import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
@@ -155,6 +159,37 @@ class ConsoleApiImpl(
         }
             .bindMapLeft(::toServerError)
             .bind()
+    }
+
+    override suspend fun getAppDraftDetails(
+        context: CallContext,
+        request: GetAppDraftDetailsRequest,
+    ): Either<GetAppDraftDetailsError, GetAppDraftDetailsResponse> = either {
+        val currentTime = timestampSource.now()
+        val listingText = dataStore.runInTransaction { tx ->
+            val userId = authenticateCaller(tx, context.sessionId, currentTime)
+
+            val hasPermission = tx
+                .hasPermission(HasPermissionRequest.ViewAppDraft(request.appDraftId, userId))
+                .bindMapLeft(::toServerError)
+            ensure(hasPermission, ::InsufficientPermissionError)
+
+            tx
+                .findAppDraftListingTextApiViewByAppDraftId(request.appDraftId)
+                .bindMapLeft(::toServerError)
+        }
+            .bindMapLeft(::toServerError)
+            .bind()
+
+        GetAppDraftDetailsResponse(
+            listingText = listingText.map {
+                AppDraftListingText(
+                    name = it.name,
+                    shortDescription = it.shortDescription,
+                    etag = it.etag,
+                )
+            },
+        )
     }
 
     override suspend fun getMyOrganization(

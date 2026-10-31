@@ -22,6 +22,7 @@ import app.accrescent.server.domain.config.SessionLifetime
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingText
 import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTextAlreadyExistsError
 import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
@@ -29,6 +30,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
+import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsRequest
+import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
@@ -210,6 +213,97 @@ class ConsoleApiImplTest {
             assertEquals(
                 NonNegativeInt.MIN_VALUE,
                 response.unwrap().organization.activeAppDraftCount,
+            )
+        }
+    }
+
+    @Test
+    suspend fun `getAppDraftDetails returns Unauthenticated for unauthenticated request`() {
+        withMigratedDataStore { dataStore ->
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.getAppDraftDetails(
+                CallContext(None),
+                GetAppDraftDetailsRequest("draft1"),
+            )
+
+            assertInstanceOf<UnauthenticatedError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `getAppDraftDetails returns InsufficientPermission for unauthorized request`() {
+        withMigratedDataStore { dataStore ->
+            val idGenerator = IdGenerator(DeterministicRandomSource())
+            val context = signIn(dataStore, idGenerator = idGenerator)
+            val otherContext = signIn(
+                dataStore = dataStore,
+                externalUserId = ExternalUserId.Github(2),
+                idGenerator = idGenerator,
+            )
+            val consoleApi = makeConsoleApi(dataStore)
+            val otherOrganizationId = consoleApi
+                .getMyOrganization(otherContext)
+                .unwrap()
+                .organizationId
+            val otherAppDraftId = consoleApi
+                .createAppDraft(otherContext, CreateAppDraftRequest(otherOrganizationId))
+                .unwrap()
+                .appDraftId
+
+            val response = consoleApi.getAppDraftDetails(
+                context,
+                GetAppDraftDetailsRequest(otherAppDraftId),
+            )
+
+            assertInstanceOf<InsufficientPermissionError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `getAppDraftDetails returns no listing text for app draft without listing text`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val appDraftId = consoleApi
+                .createAppDraft(context, CreateAppDraftRequest("org_1uMy9o9BqyoxomLjIEbctU"))
+                .unwrap()
+                .appDraftId
+
+            val response = consoleApi.getAppDraftDetails(
+                context,
+                GetAppDraftDetailsRequest(appDraftId),
+            )
+
+            assertEquals(GetAppDraftDetailsResponse(None), response.unwrap())
+        }
+    }
+
+    @Test
+    suspend fun `getAppDraftDetails returns listing text for app draft with listing text`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val appDraftId = consoleApi
+                .createAppDraft(context, CreateAppDraftRequest("org_1uMy9o9BqyoxomLjIEbctU"))
+                .unwrap()
+                .appDraftId
+            val etag = consoleApi
+                .createAppDraftListingText(
+                    context,
+                    CreateAppDraftListingTextRequest(appDraftId, APP_NAME, SHORT_DESCRIPTION),
+                )
+                .unwrap()
+                .etag
+
+            val response =
+                consoleApi.getAppDraftDetails(context, GetAppDraftDetailsRequest(appDraftId))
+
+            assertEquals(
+                GetAppDraftDetailsResponse(
+                    Some(AppDraftListingText(APP_NAME.value, SHORT_DESCRIPTION.value, etag)),
+                ),
+                response.unwrap(),
             )
         }
     }

@@ -10,6 +10,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTe
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextError
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
@@ -53,6 +54,16 @@ fun toStatus(error: CreateAppDraftListingTextError): Status {
 }
 
 fun toStatus(error: DeleteAppDraftError): Status {
+    return when (error) {
+        is UnauthenticatedError -> status(ErrorReason.ERROR_REASON_UNAUTHENTICATED, error)
+        is InsufficientPermissionError ->
+            status(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION, error)
+
+        is ServerError -> toStatus(error)
+    }
+}
+
+fun toStatus(error: GetAppDraftDetailsError): Status {
     return when (error) {
         is UnauthenticatedError -> status(ErrorReason.ERROR_REASON_UNAUTHENTICATED, error)
         is InsufficientPermissionError ->

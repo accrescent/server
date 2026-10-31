@@ -9,6 +9,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTe
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextError
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfError
@@ -57,6 +58,18 @@ class ErrorConvertersTest {
     @MethodSource("toStatusCorrectlyConvertsDeleteAppDraftErrorTestCases")
     fun `toStatus correctly converts DeleteAppDraftError`(
         testCase: ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase,
+    ) {
+        val status = toStatus(testCase.error)
+
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
+        assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
+    }
+
+    @ParameterizedTest
+    @MethodSource("toStatusCorrectlyConvertsGetAppDraftDetailsErrorTestCases")
+    fun `toStatus correctly converts GetAppDraftDetailsError`(
+        testCase: ToStatusCorrectlyConvertsGetAppDraftDetailsErrorTestCase,
     ) {
         val status = toStatus(testCase.error)
 
@@ -140,6 +153,12 @@ class ErrorConvertersTest {
 
         data class ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
             val error: DeleteAppDraftError,
+            val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
+        )
+
+        data class ToStatusCorrectlyConvertsGetAppDraftDetailsErrorTestCase(
+            val error: GetAppDraftDetailsError,
             val expectedCode: Code,
             val expectedErrorInfo: ErrorInfo,
         )
@@ -228,6 +247,23 @@ class ErrorConvertersTest {
                     errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
                 ),
                 ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
+                    InsufficientPermissionError(),
+                    Code.PERMISSION_DENIED,
+                    errorInfo(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION),
+                ),
+            )
+        }
+
+        @JvmStatic
+        private fun toStatusCorrectlyConvertsGetAppDraftDetailsErrorTestCases():
+                List<ToStatusCorrectlyConvertsGetAppDraftDetailsErrorTestCase> {
+            return listOf(
+                ToStatusCorrectlyConvertsGetAppDraftDetailsErrorTestCase(
+                    UnauthenticatedError(),
+                    Code.UNAUTHENTICATED,
+                    errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
+                ),
+                ToStatusCorrectlyConvertsGetAppDraftDetailsErrorTestCase(
                     InsufficientPermissionError(),
                     Code.PERMISSION_DENIED,
                     errorInfo(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION),

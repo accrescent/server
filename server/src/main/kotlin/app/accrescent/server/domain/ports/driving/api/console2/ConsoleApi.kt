@@ -44,6 +44,17 @@ interface ConsoleApi {
     ): Either<DeleteAppDraftError, Unit>
 
     /**
+     * Gets the details of an app draft.
+     *
+     * @param context the context for this call.
+     * @param request the request parameters.
+     */
+    suspend fun getAppDraftDetails(
+        context: CallContext,
+        request: GetAppDraftDetailsRequest,
+    ): Either<GetAppDraftDetailsError, GetAppDraftDetailsResponse>
+
+    /**
      * Gets the organization of the currently authenticated user.
      *
      * @param context the context for this call.

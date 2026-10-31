@@ -22,6 +22,11 @@ sealed interface CreateAppDraftListingTextError
 sealed interface DeleteAppDraftError
 
 /**
+ * An error that can occur when getting an app draft's details.
+ */
+sealed interface GetAppDraftDetailsError
+
+/**
  * An error that can occur when getting the authenticated user's organization.
  */
 sealed interface GetMyOrganizationError
@@ -49,6 +54,7 @@ sealed class ServerError :
     CreateAppDraftError,
     CreateAppDraftListingTextError,
     DeleteAppDraftError,
+    GetAppDraftDetailsError,
     GetMyOrganizationError,
     GetOrganizationError,
     GetSelfError,
@@ -90,6 +96,7 @@ class InsufficientPermissionError :
     CreateAppDraftError,
     CreateAppDraftListingTextError,
     DeleteAppDraftError,
+    GetAppDraftDetailsError,
     GetOrganizationError,
     ListAppDraftSummariesError {
     override val message = "insufficient permission"
@@ -110,6 +117,7 @@ class UnauthenticatedError :
     CreateAppDraftError,
     CreateAppDraftListingTextError,
     DeleteAppDraftError,
+    GetAppDraftDetailsError,
     GetMyOrganizationError,
     GetOrganizationError,
     GetSelfError,

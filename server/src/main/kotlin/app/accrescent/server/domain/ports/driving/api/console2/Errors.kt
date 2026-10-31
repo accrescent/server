@@ -12,6 +12,11 @@ import app.accrescent.server.core.Error
 sealed interface CreateAppDraftError
 
 /**
+ * An error that can occur when creating an app draft's listing text.
+ */
+sealed interface CreateAppDraftListingTextError
+
+/**
  * An error that can occur when deleting an app draft.
  */
 sealed interface DeleteAppDraftError
@@ -42,6 +47,7 @@ sealed interface ListAppDraftSummariesError
 sealed class ServerError :
     Error(),
     CreateAppDraftError,
+    CreateAppDraftListingTextError,
     DeleteAppDraftError,
     GetMyOrganizationError,
     GetOrganizationError,
@@ -70,11 +76,19 @@ class ActiveAppDraftLimitExceededError : Error(), CreateAppDraftError {
 }
 
 /**
+ * The app draft already has listing text.
+ */
+class AppDraftListingTextAlreadyExistsError : Error(), CreateAppDraftListingTextError {
+    override val message = "app draft listing text already exists"
+}
+
+/**
  * The caller does not have sufficient permission to perform the operation.
  */
 class InsufficientPermissionError :
     Error(),
     CreateAppDraftError,
+    CreateAppDraftListingTextError,
     DeleteAppDraftError,
     GetOrganizationError,
     ListAppDraftSummariesError {
@@ -94,6 +108,7 @@ class InvalidPageTokenError : Error(), ListAppDraftSummariesError {
 class UnauthenticatedError :
     Error(),
     CreateAppDraftError,
+    CreateAppDraftListingTextError,
     DeleteAppDraftError,
     GetMyOrganizationError,
     GetOrganizationError,

@@ -9,8 +9,12 @@ import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.android.ApplicationId
 import app.accrescent.server.domain.android.VersionName
+import app.accrescent.server.domain.appstore.AppName
+import app.accrescent.server.domain.appstore.AppShortDescription
 import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
 import app.accrescent.server.domain.ports.driving.api.console2.AppPackageSummary
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextRequest
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextResponse
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
@@ -26,6 +30,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.UserRole
 import app.accrescent.server.domain.uri.HttpUri
 import arrow.core.Some
 import build.buf.gen.accrescent.console.v1.appDraftSummary
+import build.buf.gen.accrescent.console.v1.createAppDraftListingTextRequest
+import build.buf.gen.accrescent.console.v1.createAppDraftListingTextResponse
 import build.buf.gen.accrescent.console.v1.createAppDraftRequest
 import build.buf.gen.accrescent.console.v1.createAppDraftResponse
 import build.buf.gen.accrescent.console.v1.deleteAppDraftRequest
@@ -46,6 +52,22 @@ class MessageConvertersTest {
     fun `toDomain correctly converts CreateAppDraftRequest`() {
         val proto = createAppDraftRequest { organizationId = "org1" }
         val domain = CreateAppDraftRequest("org1")
+
+        assertEquals(domain, toDomain(proto))
+    }
+
+    @Test
+    fun `toDomain correctly converts CreateAppDraftListingTextRequest`() {
+        val proto = createAppDraftListingTextRequest {
+            appDraftId = "draft1"
+            name = "Example"
+            shortDescription = "An example app"
+        }
+        val domain = CreateAppDraftListingTextRequest(
+            appDraftId = "draft1",
+            name = AppName.fromString("Example").unwrap(),
+            shortDescription = AppShortDescription.fromString("An example app").unwrap(),
+        )
 
         assertEquals(domain, toDomain(proto))
     }
@@ -86,6 +108,14 @@ class MessageConvertersTest {
     fun `toProto correctly converts CreateAppDraftResponse`() {
         val domain = CreateAppDraftResponse("draft1")
         val proto = createAppDraftResponse { appDraftId = "draft1" }
+
+        assertEquals(proto, toProto(domain))
+    }
+
+    @Test
+    fun `toProto correctly converts CreateAppDraftListingTextResponse`() {
+        val domain = CreateAppDraftListingTextResponse("etag1")
+        val proto = createAppDraftListingTextResponse { etag = "etag1" }
 
         assertEquals(proto, toProto(domain))
     }

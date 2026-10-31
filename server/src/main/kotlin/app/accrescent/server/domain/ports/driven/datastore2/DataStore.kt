@@ -7,6 +7,8 @@ package app.accrescent.server.domain.ports.driven.datastore2
 import app.accrescent.server.core.Error
 import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.PositiveInt
+import app.accrescent.server.domain.appstore.AppName
+import app.accrescent.server.domain.appstore.AppShortDescription
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.crypto.Sha256Hash
 import arrow.core.Either
@@ -136,6 +138,22 @@ interface DataStore {
             organizationId: String,
             createTime: OffsetDateTime,
         ): DataStoreResult<Unit>
+
+        /**
+         * Creates an app draft's listing text.
+         *
+         * @param appDraftId the ID of the app draft to create listing text for.
+         * @param name the app's name.
+         * @param shortDescription the app's short description.
+         * @return a content-based ETag of the created listing text, [None] if the app draft already
+         * has listing text, or [DataStoreError.ConsistencyViolation] if the app draft does not
+         * exist.
+         */
+        abstract suspend fun createAppDraftListingText(
+            appDraftId: String,
+            name: AppName,
+            shortDescription: AppShortDescription,
+        ): DataStoreResult<Option<String>>
 
         /**
          * Creates an organization with its owner.

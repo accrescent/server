@@ -7,6 +7,7 @@ package app.accrescent.server.domain.api.console2
 import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.bindMapLeft
+import app.accrescent.server.core.toEitherBind
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.IdGenerator
 import app.accrescent.server.domain.IdType
@@ -16,10 +17,14 @@ import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.datastore2.HasPermissionRequest
 import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTextAlreadyExistsError
 import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextError
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextRequest
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextResponse
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
@@ -101,6 +106,35 @@ class ConsoleApiImpl(
             .bind()
 
         CreateAppDraftResponse(appDraftId)
+    }
+
+    override suspend fun createAppDraftListingText(
+        context: CallContext,
+        request: CreateAppDraftListingTextRequest,
+    ): Either<CreateAppDraftListingTextError, CreateAppDraftListingTextResponse> = either {
+        val currentTime = timestampSource.now()
+        val etag = dataStore.runInTransaction { tx ->
+            val userId = authenticateCaller(tx, context.sessionId, currentTime)
+
+            val hasPermission = tx
+                .hasPermission(HasPermissionRequest.EditAppDraftListing(request.appDraftId, userId))
+                .bindMapLeft(::toServerError)
+            ensure(hasPermission, ::InsufficientPermissionError)
+
+            // The app draft is guaranteed to exist since permission is granted
+            tx
+                .createAppDraftListingText(
+                    appDraftId = request.appDraftId,
+                    name = request.name,
+                    shortDescription = request.shortDescription,
+                )
+                .bindMapLeft(::toServerError)
+                .toEitherBind(::AppDraftListingTextAlreadyExistsError)
+        }
+            .bindMapLeft(::toServerError)
+            .bind()
+
+        CreateAppDraftListingTextResponse(etag)
     }
 
     override suspend fun deleteAppDraft(

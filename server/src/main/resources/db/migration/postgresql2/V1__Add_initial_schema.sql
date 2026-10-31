@@ -43,3 +43,22 @@ CREATE TABLE app_drafts (
     organization_id stable_text NOT NULL REFERENCES organizations(id),
     create_time timestamp with time zone NOT NULL
 );
+CREATE TABLE app_draft_listing_texts (
+    app_draft_id stable_text PRIMARY KEY REFERENCES app_drafts(id) ON DELETE CASCADE,
+    -- Use the expansion of stable_text for these columns instead of stable_text directly since
+    -- virtual generated columns can't use or reference columns using user-defined types in
+    -- PostgreSQL 18 (see https://www.postgresql.org/docs/18/ddl-generated-columns.html)
+    name text COLLATE "ucs_basic" NOT NULL CHECK (char_length(name) BETWEEN 1 AND 30),
+    short_description text COLLATE "ucs_basic" NOT NULL
+        CHECK (char_length(short_description) BETWEEN 1 AND 80),
+    -- This method of combining the listing text's name and short description is injective - which
+    -- is necessary to avoid accidental collisions - since the text type cannot contain NULL bytes
+    etag text COLLATE "ucs_basic" GENERATED ALWAYS AS (encode(
+        sha256(
+            decode(replace(name, '\', '\\'), 'escape')
+            || '\x00'::bytea
+            || decode(replace(short_description, '\', '\\'), 'escape')
+        ),
+        'base64')
+    )
+);

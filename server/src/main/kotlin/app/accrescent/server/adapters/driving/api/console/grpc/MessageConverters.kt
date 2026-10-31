@@ -6,7 +6,11 @@ package app.accrescent.server.adapters.driving.api.console.grpc
 
 import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.unwrap
+import app.accrescent.server.domain.appstore.AppName
+import app.accrescent.server.domain.appstore.AppShortDescription
 import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextRequest
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextResponse
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
@@ -21,6 +25,7 @@ import arrow.core.None
 import arrow.core.Some
 import arrow.core.some
 import build.buf.gen.accrescent.console.v1.appDraftSummary
+import build.buf.gen.accrescent.console.v1.createAppDraftListingTextResponse
 import build.buf.gen.accrescent.console.v1.createAppDraftResponse
 import build.buf.gen.accrescent.console.v1.getMyOrganizationResponse
 import build.buf.gen.accrescent.console.v1.getOrganizationResponse
@@ -29,6 +34,8 @@ import build.buf.gen.accrescent.console.v1.listAppDraftSummariesResponse
 import build.buf.gen.accrescent.console.v1.organization
 import build.buf.gen.accrescent.console.v1.user
 import build.buf.gen.accrescent.console.v1.AppDraftSummary as AppDraftSummaryProto
+import build.buf.gen.accrescent.console.v1.CreateAppDraftListingTextRequest as CreateAppDraftListingTextRequestProto
+import build.buf.gen.accrescent.console.v1.CreateAppDraftListingTextResponse as CreateAppDraftListingTextResponseProto
 import build.buf.gen.accrescent.console.v1.CreateAppDraftRequest as CreateAppDraftRequestProto
 import build.buf.gen.accrescent.console.v1.CreateAppDraftResponse as CreateAppDraftResponseProto
 import build.buf.gen.accrescent.console.v1.DeleteAppDraftRequest as DeleteAppDraftRequestProto
@@ -42,6 +49,15 @@ import build.buf.gen.accrescent.console.v1.UserRole as UserRoleProto
 
 fun toDomain(request: CreateAppDraftRequestProto): CreateAppDraftRequest {
     return CreateAppDraftRequest(request.organizationId)
+}
+
+fun toDomain(request: CreateAppDraftListingTextRequestProto): CreateAppDraftListingTextRequest {
+    return CreateAppDraftListingTextRequest(
+        appDraftId = request.appDraftId,
+        // Request validation guarantees the name and short description are valid
+        name = AppName.fromString(request.name).unwrap(),
+        shortDescription = AppShortDescription.fromString(request.shortDescription).unwrap(),
+    )
 }
 
 fun toDomain(request: DeleteAppDraftRequestProto): DeleteAppDraftRequest {
@@ -68,6 +84,12 @@ fun toDomain(request: ListAppDraftSummariesRequestProto): ListAppDraftSummariesR
 fun toProto(response: CreateAppDraftResponse): CreateAppDraftResponseProto {
     return createAppDraftResponse {
         appDraftId = response.appDraftId
+    }
+}
+
+fun toProto(response: CreateAppDraftListingTextResponse): CreateAppDraftListingTextResponseProto {
+    return createAppDraftListingTextResponse {
+        etag = response.etag
     }
 }
 

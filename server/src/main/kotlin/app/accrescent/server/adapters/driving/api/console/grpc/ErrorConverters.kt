@@ -6,7 +6,9 @@ package app.accrescent.server.adapters.driving.api.console.grpc
 
 import app.accrescent.server.core.Error
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTextAlreadyExistsError
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextError
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
@@ -32,6 +34,19 @@ fun toStatus(error: CreateAppDraftError): Status {
 
         is ActiveAppDraftLimitExceededError ->
             status(ErrorReason.ERROR_REASON_RESOURCE_LIMIT_EXCEEDED, error)
+
+        is ServerError -> toStatus(error)
+    }
+}
+
+fun toStatus(error: CreateAppDraftListingTextError): Status {
+    return when (error) {
+        is UnauthenticatedError -> status(ErrorReason.ERROR_REASON_UNAUTHENTICATED, error)
+        is InsufficientPermissionError ->
+            status(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION, error)
+
+        is AppDraftListingTextAlreadyExistsError ->
+            status(ErrorReason.ERROR_REASON_ALREADY_EXISTS, error)
 
         is ServerError -> toStatus(error)
     }

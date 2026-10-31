@@ -132,8 +132,8 @@ fun toProto(response: GetAppDraftDetailsResponse): GetAppDraftDetailsResponsePro
             listingText = appDraftListingText {
                 name = it.name
                 shortDescription = it.shortDescription
+                etag = it.etag
             }
-            listingTextEtag = it.etag
         }
     }
 }

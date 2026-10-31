@@ -204,8 +204,8 @@ class MessageConvertersTest {
             listingText = appDraftListingText {
                 name = "Example"
                 shortDescription = "An example app"
+                etag = "etag1"
             }
-            listingTextEtag = "etag1"
         }
 
         assertEquals(proto, toProto(domain))

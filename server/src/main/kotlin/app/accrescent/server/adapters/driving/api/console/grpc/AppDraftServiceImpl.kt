@@ -13,6 +13,7 @@ import build.buf.gen.accrescent.console.v1.DeleteAppDraftRequest
 import build.buf.gen.accrescent.console.v1.DeleteAppDraftResponse
 import build.buf.gen.accrescent.console.v1.GetAppDraftDetailsRequest
 import build.buf.gen.accrescent.console.v1.ListAppDraftSummariesRequest
+import build.buf.gen.accrescent.console.v1.UpdateAppDraftListingTextRequest
 import build.buf.gen.accrescent.console.v1.deleteAppDraftResponse
 import io.grpc.protobuf.StatusProto
 import kotlin.coroutines.CoroutineContext
@@ -20,6 +21,7 @@ import build.buf.gen.accrescent.console.v1.CreateAppDraftListingTextResponse as 
 import build.buf.gen.accrescent.console.v1.CreateAppDraftResponse as CreateAppDraftResponseProto
 import build.buf.gen.accrescent.console.v1.GetAppDraftDetailsResponse as GetAppDraftDetailsResponseProto
 import build.buf.gen.accrescent.console.v1.ListAppDraftSummariesResponse as ListAppDraftSummariesResponseProto
+import build.buf.gen.accrescent.console.v1.UpdateAppDraftListingTextResponse as UpdateAppDraftListingTextResponseProto
 
 /**
  * gRPC implementation of the console API's `AppDraftService`.
@@ -84,6 +86,17 @@ class AppDraftServiceImpl(
         val context = CallContextInterceptor.CALL_CONTEXT_KEY.get()
 
         return consoleApi.listAppDraftSummaries(context, toDomain(request))
+            .mapLeft(::toStatus)
+            .getOrElse { throw StatusProto.toStatusRuntimeException(it) }
+            .let(::toProto)
+    }
+
+    override suspend fun updateAppDraftListingText(
+        request: UpdateAppDraftListingTextRequest,
+    ): UpdateAppDraftListingTextResponseProto {
+        val context = CallContextInterceptor.CALL_CONTEXT_KEY.get()
+
+        return consoleApi.updateAppDraftListingText(context, toDomain(request))
             .mapLeft(::toStatus)
             .getOrElse { throw StatusProto.toStatusRuntimeException(it) }
             .let(::toProto)

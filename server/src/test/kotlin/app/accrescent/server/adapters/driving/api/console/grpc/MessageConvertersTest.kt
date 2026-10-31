@@ -28,6 +28,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetSelfResponse
 import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesRequest
 import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesResponse
 import app.accrescent.server.domain.ports.driving.api.console2.Organization
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextRequest
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextResponse
 import app.accrescent.server.domain.ports.driving.api.console2.User
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
 import app.accrescent.server.domain.uri.HttpUri
@@ -49,7 +51,10 @@ import build.buf.gen.accrescent.console.v1.getSelfResponse
 import build.buf.gen.accrescent.console.v1.listAppDraftSummariesRequest
 import build.buf.gen.accrescent.console.v1.listAppDraftSummariesResponse
 import build.buf.gen.accrescent.console.v1.organization
+import build.buf.gen.accrescent.console.v1.updateAppDraftListingTextRequest
+import build.buf.gen.accrescent.console.v1.updateAppDraftListingTextResponse
 import build.buf.gen.accrescent.console.v1.user
+import com.google.protobuf.fieldMask
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import build.buf.gen.accrescent.console.v1.UserRole as UserRoleProto
@@ -114,6 +119,61 @@ class MessageConvertersTest {
             organizationId = "org1",
             pageSize = Some(PositiveInt.new(10).unwrap()),
             pageToken = Some("token1"),
+        )
+
+        assertEquals(domain, toDomain(proto))
+    }
+
+    @Test
+    fun `toDomain correctly converts UpdateAppDraftListingTextRequest with all fields`() {
+        val proto = updateAppDraftListingTextRequest {
+            appDraftId = "draft1"
+            name = "Example"
+            shortDescription = "An example app"
+            etag = "etag1"
+            updateMask = fieldMask { paths += listOf("name", "short_description") }
+        }
+        val domain = UpdateAppDraftListingTextRequest(
+            appDraftId = "draft1",
+            etag = "etag1",
+            name = Some(AppName.fromString("Example").unwrap()),
+            shortDescription = Some(AppShortDescription.fromString("An example app").unwrap()),
+        )
+
+        assertEquals(domain, toDomain(proto))
+    }
+
+    @Test
+    fun `toDomain correctly converts UpdateAppDraftListingTextRequest with only name`() {
+        val proto = updateAppDraftListingTextRequest {
+            appDraftId = "draft1"
+            name = "Example"
+            etag = "etag1"
+            updateMask = fieldMask { paths += "name" }
+        }
+        val domain = UpdateAppDraftListingTextRequest(
+            appDraftId = "draft1",
+            etag = "etag1",
+            name = Some(AppName.fromString("Example").unwrap()),
+            shortDescription = None,
+        )
+
+        assertEquals(domain, toDomain(proto))
+    }
+
+    @Test
+    fun `toDomain correctly converts UpdateAppDraftListingTextRequest with only short description`() {
+        val proto = updateAppDraftListingTextRequest {
+            appDraftId = "draft1"
+            shortDescription = "An example app"
+            etag = "etag1"
+            updateMask = fieldMask { paths += "short_description" }
+        }
+        val domain = UpdateAppDraftListingTextRequest(
+            appDraftId = "draft1",
+            etag = "etag1",
+            name = None,
+            shortDescription = Some(AppShortDescription.fromString("An example app").unwrap()),
         )
 
         assertEquals(domain, toDomain(proto))
@@ -234,6 +294,14 @@ class MessageConvertersTest {
             }
             nextPageToken = "token1"
         }
+
+        assertEquals(proto, toProto(domain))
+    }
+
+    @Test
+    fun `toProto correctly converts UpdateAppDraftListingTextResponse`() {
+        val domain = UpdateAppDraftListingTextResponse("etag1")
+        val proto = updateAppDraftListingTextResponse { etag = "etag1" }
 
         assertEquals(proto, toProto(domain))
     }

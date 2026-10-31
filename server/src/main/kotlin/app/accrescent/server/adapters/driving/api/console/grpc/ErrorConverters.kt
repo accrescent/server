@@ -10,6 +10,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTe
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextError
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.EtagMismatchError
 import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
@@ -19,6 +20,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.InvalidPageTokenE
 import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesError
 import app.accrescent.server.domain.ports.driving.api.console2.ServerError
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextError
 import build.buf.gen.accrescent.console.v1.ErrorReason
 import com.google.rpc.Code
 import com.google.rpc.ErrorInfo
@@ -104,6 +106,17 @@ fun toStatus(error: ListAppDraftSummariesError): Status {
             status(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION, error)
 
         is InvalidPageTokenError -> status(ErrorReason.ERROR_REASON_INVALID_REQUEST, error)
+        is ServerError -> toStatus(error)
+    }
+}
+
+fun toStatus(error: UpdateAppDraftListingTextError): Status {
+    return when (error) {
+        is UnauthenticatedError -> status(ErrorReason.ERROR_REASON_UNAUTHENTICATED, error)
+        is InsufficientPermissionError ->
+            status(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION, error)
+
+        is EtagMismatchError -> status(ErrorReason.ERROR_REASON_ETAG_MISMATCH, error)
         is ServerError -> toStatus(error)
     }
 }

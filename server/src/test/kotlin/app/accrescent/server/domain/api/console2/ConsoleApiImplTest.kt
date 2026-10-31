@@ -30,6 +30,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
+import app.accrescent.server.domain.ports.driving.api.console2.EtagMismatchError
 import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
@@ -42,6 +43,7 @@ import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSumma
 import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesResponse
 import app.accrescent.server.domain.ports.driving.api.console2.Organization
 import app.accrescent.server.domain.ports.driving.api.console2.UnauthenticatedError
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextRequest
 import app.accrescent.server.domain.ports.driving.api.console2.User
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
 import app.accrescent.server.impl.v1.ListAppDraftSummariesPageToken
@@ -589,10 +591,156 @@ class ConsoleApiImplTest {
         }
     }
 
+    @Test
+    suspend fun `updateAppDraftListingText returns Unauthenticated for unauthenticated request`() {
+        withMigratedDataStore { dataStore ->
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.updateAppDraftListingText(
+                CallContext(None),
+                UpdateAppDraftListingTextRequest("draft1", "etag1", Some(NEW_APP_NAME), None),
+            )
+
+            assertInstanceOf<UnauthenticatedError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText returns InsufficientPermission for unauthorized request`() {
+        withMigratedDataStore { dataStore ->
+            val idGenerator = IdGenerator(DeterministicRandomSource())
+            val context = signIn(dataStore, idGenerator = idGenerator)
+            val otherContext = signIn(
+                dataStore = dataStore,
+                externalUserId = ExternalUserId.Github(2),
+                idGenerator = idGenerator,
+            )
+            val consoleApi = makeConsoleApi(dataStore)
+            val otherOrganizationId = consoleApi
+                .getMyOrganization(otherContext)
+                .unwrap()
+                .organizationId
+            val otherAppDraftId = consoleApi
+                .createAppDraft(otherContext, CreateAppDraftRequest(otherOrganizationId))
+                .unwrap()
+                .appDraftId
+            val etag = consoleApi
+                .createAppDraftListingText(
+                    otherContext,
+                    CreateAppDraftListingTextRequest(otherAppDraftId, APP_NAME, SHORT_DESCRIPTION),
+                )
+                .unwrap()
+                .etag
+
+            val response = consoleApi.updateAppDraftListingText(
+                context,
+                UpdateAppDraftListingTextRequest(otherAppDraftId, etag, Some(NEW_APP_NAME), None),
+            )
+
+            assertInstanceOf<InsufficientPermissionError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText returns EtagMismatch when etag is not current`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val appDraftId = consoleApi
+                .createAppDraft(context, CreateAppDraftRequest("org_1uMy9o9BqyoxomLjIEbctU"))
+                .unwrap()
+                .appDraftId
+            val staleEtag = consoleApi
+                .createAppDraftListingText(
+                    context,
+                    CreateAppDraftListingTextRequest(appDraftId, APP_NAME, SHORT_DESCRIPTION),
+                )
+                .unwrap()
+                .etag
+            consoleApi
+                .updateAppDraftListingText(
+                    context,
+                    UpdateAppDraftListingTextRequest(appDraftId, staleEtag, Some(NEW_APP_NAME), None),
+                )
+                .unwrap()
+
+            val response = consoleApi.updateAppDraftListingText(
+                context,
+                UpdateAppDraftListingTextRequest(
+                    appDraftId = appDraftId,
+                    etag = staleEtag,
+                    name = None,
+                    shortDescription = Some(NEW_SHORT_DESCRIPTION),
+                ),
+            )
+
+            assertInstanceOf<EtagMismatchError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText returns EtagMismatch for app draft without listing text`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val appDraftId = consoleApi
+                .createAppDraft(context, CreateAppDraftRequest("org_1uMy9o9BqyoxomLjIEbctU"))
+                .unwrap()
+                .appDraftId
+
+            val response = consoleApi.updateAppDraftListingText(
+                context,
+                UpdateAppDraftListingTextRequest(appDraftId, "etag1", Some(NEW_APP_NAME), None),
+            )
+
+            assertInstanceOf<EtagMismatchError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `updateAppDraftListingText updates listing text for authorized request with current etag`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val appDraftId = consoleApi
+                .createAppDraft(context, CreateAppDraftRequest("org_1uMy9o9BqyoxomLjIEbctU"))
+                .unwrap()
+                .appDraftId
+            val etag = consoleApi
+                .createAppDraftListingText(
+                    context,
+                    CreateAppDraftListingTextRequest(appDraftId, APP_NAME, SHORT_DESCRIPTION),
+                )
+                .unwrap()
+                .etag
+
+            val newEtag = consoleApi
+                .updateAppDraftListingText(
+                    context,
+                    UpdateAppDraftListingTextRequest(appDraftId, etag, Some(NEW_APP_NAME), None),
+                )
+                .unwrap()
+                .etag
+            val details = consoleApi
+                .getAppDraftDetails(context, GetAppDraftDetailsRequest(appDraftId))
+                .unwrap()
+
+            assertEquals(
+                GetAppDraftDetailsResponse(
+                    Some(AppDraftListingText(NEW_APP_NAME.value, SHORT_DESCRIPTION.value, newEtag)),
+                ),
+                details,
+            )
+        }
+    }
+
     private companion object {
         private val vertx = Vertx.vertx()
         private val APP_NAME = AppName.fromString("SecureChat").unwrap()
         private val SHORT_DESCRIPTION = AppShortDescription.fromString("Secure texting").unwrap()
+        private val NEW_APP_NAME = AppName.fromString("SecureChat Pro").unwrap()
+        private val NEW_SHORT_DESCRIPTION =
+            AppShortDescription.fromString("Secure texting for everyone").unwrap()
 
         @JvmStatic
         private fun invalidListAppDraftSummariesPageTokens(): List<String> {

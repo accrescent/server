@@ -22,6 +22,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRe
 import app.accrescent.server.domain.ports.driving.api.console2.GetSelfResponse
 import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesRequest
 import app.accrescent.server.domain.ports.driving.api.console2.ListAppDraftSummariesResponse
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextRequest
+import app.accrescent.server.domain.ports.driving.api.console2.UpdateAppDraftListingTextResponse
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
 import arrow.core.None
 import arrow.core.Some
@@ -36,6 +38,7 @@ import build.buf.gen.accrescent.console.v1.getOrganizationResponse
 import build.buf.gen.accrescent.console.v1.getSelfResponse
 import build.buf.gen.accrescent.console.v1.listAppDraftSummariesResponse
 import build.buf.gen.accrescent.console.v1.organization
+import build.buf.gen.accrescent.console.v1.updateAppDraftListingTextResponse
 import build.buf.gen.accrescent.console.v1.user
 import build.buf.gen.accrescent.console.v1.AppDraftSummary as AppDraftSummaryProto
 import build.buf.gen.accrescent.console.v1.CreateAppDraftListingTextRequest as CreateAppDraftListingTextRequestProto
@@ -51,6 +54,8 @@ import build.buf.gen.accrescent.console.v1.GetOrganizationResponse as GetOrganiz
 import build.buf.gen.accrescent.console.v1.GetSelfResponse as GetSelfResponseProto
 import build.buf.gen.accrescent.console.v1.ListAppDraftSummariesRequest as ListAppDraftSummariesRequestProto
 import build.buf.gen.accrescent.console.v1.ListAppDraftSummariesResponse as ListAppDraftSummariesResponseProto
+import build.buf.gen.accrescent.console.v1.UpdateAppDraftListingTextRequest as UpdateAppDraftListingTextRequestProto
+import build.buf.gen.accrescent.console.v1.UpdateAppDraftListingTextResponse as UpdateAppDraftListingTextResponseProto
 import build.buf.gen.accrescent.console.v1.UserRole as UserRoleProto
 
 fun toDomain(request: CreateAppDraftRequestProto): CreateAppDraftRequest {
@@ -88,6 +93,24 @@ fun toDomain(request: ListAppDraftSummariesRequestProto): ListAppDraftSummariesR
             None
         },
         pageToken = if (request.hasPageToken()) Some(request.pageToken) else None,
+    )
+}
+
+fun toDomain(request: UpdateAppDraftListingTextRequestProto): UpdateAppDraftListingTextRequest {
+    return UpdateAppDraftListingTextRequest(
+        appDraftId = request.appDraftId,
+        etag = request.etag,
+        // Request validation guarantees the name and short description are valid if set
+        name = if (request.hasName()) {
+            AppName.fromString(request.name).unwrap().some()
+        } else {
+            None
+        },
+        shortDescription = if (request.hasShortDescription()) {
+            AppShortDescription.fromString(request.shortDescription).unwrap().some()
+        } else {
+            None
+        },
     )
 }
 
@@ -146,6 +169,12 @@ fun toProto(response: ListAppDraftSummariesResponse): ListAppDraftSummariesRespo
     return listAppDraftSummariesResponse {
         appDraftSummaries += response.appDraftSummaries.map(::toProto)
         response.nextPageToken.onSome { nextPageToken = it }
+    }
+}
+
+fun toProto(response: UpdateAppDraftListingTextResponse): UpdateAppDraftListingTextResponseProto {
+    return updateAppDraftListingTextResponse {
+        etag = response.etag
     }
 }
 

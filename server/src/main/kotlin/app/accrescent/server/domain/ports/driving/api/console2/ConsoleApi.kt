@@ -93,4 +93,15 @@ interface ConsoleApi {
         context: CallContext,
         request: ListAppDraftSummariesRequest,
     ): Either<ListAppDraftSummariesError, ListAppDraftSummariesResponse>
+
+    /**
+     * Updates an app draft's listing text.
+     *
+     * @param context the context for this call.
+     * @param request the request parameters.
+     */
+    suspend fun updateAppDraftListingText(
+        context: CallContext,
+        request: UpdateAppDraftListingTextRequest,
+    ): Either<UpdateAppDraftListingTextError, UpdateAppDraftListingTextResponse>
 }

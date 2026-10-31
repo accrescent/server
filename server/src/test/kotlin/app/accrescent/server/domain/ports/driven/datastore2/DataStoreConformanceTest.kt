@@ -554,6 +554,57 @@ abstract class DataStoreConformanceTest {
     }
 
     @Test
+    suspend fun `findAppDraftListingTextApiViewByAppDraftId returns None for non-existent app draft`() {
+        withMigratedDataStore { dataStore ->
+            val listingText = dataStore.runInTransaction { tx ->
+                tx.findAppDraftListingTextApiViewByAppDraftId("draft1").bind()
+            }
+                .unwrap2()
+
+            assertEquals(None, listingText)
+        }
+    }
+
+    @Test
+    suspend fun `findAppDraftListingTextApiViewByAppDraftId returns None for app draft without listing text`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            val listingText = dataStore.runInTransaction { tx ->
+                tx.findAppDraftListingTextApiViewByAppDraftId("draft1").bind()
+            }
+                .unwrap2()
+
+            assertEquals(None, listingText)
+        }
+    }
+
+    @Test
+    suspend fun `findAppDraftListingTextApiViewByAppDraftId returns API view of listing text of existing app draft`() {
+        withMigratedDataStore { dataStore ->
+            val etag = dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraftListingText("draft1", appName("Name"), shortDescription("Desc"))
+                    .bind()
+                    .unwrap()
+            }
+                .unwrap2()
+
+            val listingText = dataStore.runInTransaction { tx ->
+                tx.findAppDraftListingTextApiViewByAppDraftId("draft1").bind()
+            }
+                .unwrap2()
+
+            assertEquals(Some(AppDraftListingTextApiView("Name", "Desc", etag)), listingText)
+        }
+    }
+
+    @Test
     suspend fun `findOrgApiViewById returns API view of organization with given ID`() {
         withMigratedDataStore { dataStore ->
             dataStore.runInTransaction { tx ->
@@ -856,6 +907,14 @@ abstract class DataStoreConformanceTest {
             },
             HasPermissionReturnsTrueWithMinimalRelationships(
                 HasPermissionRequest.EditAppDraftListing("draft1", "user1"),
+            ) { tx ->
+                either {
+                    tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                    tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                }
+            },
+            HasPermissionReturnsTrueWithMinimalRelationships(
+                HasPermissionRequest.ViewAppDraft("draft1", "user1"),
             ) { tx ->
                 either {
                     tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()

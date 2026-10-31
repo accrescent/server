@@ -11,6 +11,7 @@ import app.accrescent.server.domain.android.ApplicationId
 import app.accrescent.server.domain.android.VersionName
 import app.accrescent.server.domain.appstore.AppName
 import app.accrescent.server.domain.appstore.AppShortDescription
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingText
 import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
 import app.accrescent.server.domain.ports.driving.api.console2.AppPackageSummary
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextRequest
@@ -18,6 +19,8 @@ import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftLis
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftResponse
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
+import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsRequest
+import app.accrescent.server.domain.ports.driving.api.console2.GetAppDraftDetailsResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationResponse
@@ -28,13 +31,17 @@ import app.accrescent.server.domain.ports.driving.api.console2.Organization
 import app.accrescent.server.domain.ports.driving.api.console2.User
 import app.accrescent.server.domain.ports.driving.api.console2.UserRole
 import app.accrescent.server.domain.uri.HttpUri
+import arrow.core.None
 import arrow.core.Some
+import build.buf.gen.accrescent.console.v1.appDraftListingText
 import build.buf.gen.accrescent.console.v1.appDraftSummary
 import build.buf.gen.accrescent.console.v1.createAppDraftListingTextRequest
 import build.buf.gen.accrescent.console.v1.createAppDraftListingTextResponse
 import build.buf.gen.accrescent.console.v1.createAppDraftRequest
 import build.buf.gen.accrescent.console.v1.createAppDraftResponse
 import build.buf.gen.accrescent.console.v1.deleteAppDraftRequest
+import build.buf.gen.accrescent.console.v1.getAppDraftDetailsRequest
+import build.buf.gen.accrescent.console.v1.getAppDraftDetailsResponse
 import build.buf.gen.accrescent.console.v1.getMyOrganizationResponse
 import build.buf.gen.accrescent.console.v1.getOrganizationRequest
 import build.buf.gen.accrescent.console.v1.getOrganizationResponse
@@ -81,6 +88,14 @@ class MessageConvertersTest {
     }
 
     @Test
+    fun `toDomain correctly converts GetAppDraftDetailsRequest`() {
+        val proto = getAppDraftDetailsRequest { appDraftId = "draft1" }
+        val domain = GetAppDraftDetailsRequest("draft1")
+
+        assertEquals(domain, toDomain(proto))
+    }
+
+    @Test
     fun `toDomain correctly converts GetOrganizationRequest`() {
         val proto = getOrganizationRequest { organizationId = "org1" }
         val domain = GetOrganizationRequest("org1")
@@ -116,6 +131,30 @@ class MessageConvertersTest {
     fun `toProto correctly converts CreateAppDraftListingTextResponse`() {
         val domain = CreateAppDraftListingTextResponse("etag1")
         val proto = createAppDraftListingTextResponse { etag = "etag1" }
+
+        assertEquals(proto, toProto(domain))
+    }
+
+    @Test
+    fun `toProto correctly converts GetAppDraftDetailsResponse with listing text`() {
+        val domain = GetAppDraftDetailsResponse(
+            Some(AppDraftListingText("Example", "An example app", "etag1")),
+        )
+        val proto = getAppDraftDetailsResponse {
+            listingText = appDraftListingText {
+                name = "Example"
+                shortDescription = "An example app"
+            }
+            listingTextEtag = "etag1"
+        }
+
+        assertEquals(proto, toProto(domain))
+    }
+
+    @Test
+    fun `toProto correctly converts GetAppDraftDetailsResponse without listing text`() {
+        val domain = GetAppDraftDetailsResponse(None)
+        val proto = getAppDraftDetailsResponse {}
 
         assertEquals(proto, toProto(domain))
     }

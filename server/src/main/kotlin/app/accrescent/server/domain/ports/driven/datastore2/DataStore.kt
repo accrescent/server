@@ -211,6 +211,17 @@ interface DataStore {
         abstract suspend fun deleteAppDraft(appDraftId: String): DataStoreResult<Unit>
 
         /**
+         * Finds the API view of an app draft's listing text.
+         *
+         * @param appDraftId the ID of the app draft to find the listing text of.
+         * @return the API view of the app draft's listing text, or [None] if no app draft with the
+         * given ID exists or the app draft has no listing text.
+         */
+        abstract suspend fun findAppDraftListingTextApiViewByAppDraftId(
+            appDraftId: String,
+        ): DataStoreResult<Option<AppDraftListingTextApiView>>
+
+        /**
          * Finds the API view of an organization.
          *
          * @param organizationId the ID of the organization to find.

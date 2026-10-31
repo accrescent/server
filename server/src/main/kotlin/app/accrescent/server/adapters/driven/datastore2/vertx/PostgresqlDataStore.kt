@@ -18,6 +18,7 @@ import app.accrescent.server.domain.config.DataStoreConfig
 import app.accrescent.server.domain.config.PostgresqlEndpoint
 import app.accrescent.server.domain.config.PostgresqlPasswordCredentials
 import app.accrescent.server.domain.crypto.Sha256Hash
+import app.accrescent.server.domain.ports.driven.datastore2.AppDraftListingTextApiView
 import app.accrescent.server.domain.ports.driven.datastore2.AppDraftSummaryApiView
 import app.accrescent.server.domain.ports.driven.datastore2.AppDraftSummarySortKey
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
@@ -258,6 +259,22 @@ private class PostgresqlTransaction(
         connection.executeSingleUpdate("DELETE FROM app_drafts WHERE id = ?", Tuple.of(appDraftId))
     }
 
+    override suspend fun findAppDraftListingTextApiViewByAppDraftId(
+        appDraftId: String,
+    ): DataStoreResult<Option<AppDraftListingTextApiView>> = either {
+        connection.executeOptionalQuery(
+            "SELECT name, short_description, etag FROM app_draft_listing_texts WHERE app_draft_id = ?",
+            Tuple.of(appDraftId),
+        )
+            .map {
+                AppDraftListingTextApiView(
+                    name = it.requireValue<String>(0),
+                    shortDescription = it.requireValue<String>(1),
+                    etag = it.requireValue<String>(2),
+                )
+            }
+    }
+
     override suspend fun findOrgApiViewById(
         organizationId: String,
     ): DataStoreResult<Option<OrgApiView>> = either {
@@ -331,7 +348,8 @@ private class PostgresqlTransaction(
                 "SELECT EXISTS(SELECT 1 FROM organizations WHERE id = ? AND owner_user_id = ?)"
 
             is HasPermissionRequest.DeleteAppDraft,
-            is HasPermissionRequest.EditAppDraftListing ->
+            is HasPermissionRequest.EditAppDraftListing,
+            is HasPermissionRequest.ViewAppDraft ->
                 """
                 SELECT EXISTS(
                     SELECT 1

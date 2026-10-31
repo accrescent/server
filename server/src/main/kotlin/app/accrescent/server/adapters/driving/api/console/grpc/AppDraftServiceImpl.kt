@@ -11,12 +11,14 @@ import build.buf.gen.accrescent.console.v1.CreateAppDraftListingTextRequest
 import build.buf.gen.accrescent.console.v1.CreateAppDraftRequest
 import build.buf.gen.accrescent.console.v1.DeleteAppDraftRequest
 import build.buf.gen.accrescent.console.v1.DeleteAppDraftResponse
+import build.buf.gen.accrescent.console.v1.GetAppDraftDetailsRequest
 import build.buf.gen.accrescent.console.v1.ListAppDraftSummariesRequest
 import build.buf.gen.accrescent.console.v1.deleteAppDraftResponse
 import io.grpc.protobuf.StatusProto
 import kotlin.coroutines.CoroutineContext
 import build.buf.gen.accrescent.console.v1.CreateAppDraftListingTextResponse as CreateAppDraftListingTextResponseProto
 import build.buf.gen.accrescent.console.v1.CreateAppDraftResponse as CreateAppDraftResponseProto
+import build.buf.gen.accrescent.console.v1.GetAppDraftDetailsResponse as GetAppDraftDetailsResponseProto
 import build.buf.gen.accrescent.console.v1.ListAppDraftSummariesResponse as ListAppDraftSummariesResponseProto
 
 /**
@@ -63,6 +65,17 @@ class AppDraftServiceImpl(
             .getOrElse { throw StatusProto.toStatusRuntimeException(it) }
 
         return deleteAppDraftResponse {}
+    }
+
+    override suspend fun getAppDraftDetails(
+        request: GetAppDraftDetailsRequest,
+    ): GetAppDraftDetailsResponseProto {
+        val context = CallContextInterceptor.CALL_CONTEXT_KEY.get()
+
+        return consoleApi.getAppDraftDetails(context, toDomain(request))
+            .mapLeft(::toStatus)
+            .getOrElse { throw StatusProto.toStatusRuntimeException(it) }
+            .let(::toProto)
     }
 
     override suspend fun listAppDraftSummaries(

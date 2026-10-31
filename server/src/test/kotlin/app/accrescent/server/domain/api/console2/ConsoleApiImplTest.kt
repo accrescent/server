@@ -15,14 +15,18 @@ import app.accrescent.server.core.unwrap2
 import app.accrescent.server.core.unwrapErr
 import app.accrescent.server.domain.IdGenerator
 import app.accrescent.server.domain.api.authn.AuthenticationApiImpl
+import app.accrescent.server.domain.appstore.AppName
+import app.accrescent.server.domain.appstore.AppShortDescription
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.config.SessionLifetime
 import app.accrescent.server.domain.ports.driven.datastore2.DataStore
 import app.accrescent.server.domain.ports.driven.timestampsource.TimestampSource
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTextAlreadyExistsError
 import app.accrescent.server.domain.ports.driving.api.console2.AppDraftSummary
 import app.accrescent.server.domain.ports.driving.api.console2.CallContext
 import app.accrescent.server.domain.ports.driving.api.console2.ConsoleApi
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextRequest
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftRequest
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationResponse
@@ -94,6 +98,67 @@ class ConsoleApiImplTest {
             val response = consoleApi.createAppDraft(context, request)
 
             assertInstanceOf<ActiveAppDraftLimitExceededError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraftListingText returns Unauthenticated for unauthenticated request`() {
+        withMigratedDataStore { dataStore ->
+            val consoleApi = makeConsoleApi(dataStore)
+
+            val response = consoleApi.createAppDraftListingText(
+                CallContext(None),
+                CreateAppDraftListingTextRequest("draft1", APP_NAME, SHORT_DESCRIPTION),
+            )
+
+            assertInstanceOf<UnauthenticatedError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraftListingText returns InsufficientPermission for unauthorized request`() {
+        withMigratedDataStore { dataStore ->
+            val idGenerator = IdGenerator(DeterministicRandomSource())
+            val context = signIn(dataStore, idGenerator = idGenerator)
+            val otherContext = signIn(
+                dataStore = dataStore,
+                externalUserId = ExternalUserId.Github(2),
+                idGenerator = idGenerator,
+            )
+            val consoleApi = makeConsoleApi(dataStore)
+            val otherOrganizationId = consoleApi
+                .getMyOrganization(otherContext)
+                .unwrap()
+                .organizationId
+            val otherAppDraftId = consoleApi
+                .createAppDraft(otherContext, CreateAppDraftRequest(otherOrganizationId))
+                .unwrap()
+                .appDraftId
+
+            val response = consoleApi.createAppDraftListingText(
+                context,
+                CreateAppDraftListingTextRequest(otherAppDraftId, APP_NAME, SHORT_DESCRIPTION),
+            )
+
+            assertInstanceOf<InsufficientPermissionError>(response.unwrapErr())
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraftListingText returns AppDraftListingTextAlreadyExists when app draft already has listing text`() {
+        withMigratedDataStore { dataStore ->
+            val context = signIn(dataStore)
+            val consoleApi = makeConsoleApi(dataStore)
+            val appDraftId = consoleApi
+                .createAppDraft(context, CreateAppDraftRequest("org_1uMy9o9BqyoxomLjIEbctU"))
+                .unwrap()
+                .appDraftId
+            val request = CreateAppDraftListingTextRequest(appDraftId, APP_NAME, SHORT_DESCRIPTION)
+            consoleApi.createAppDraftListingText(context, request).unwrap()
+
+            val response = consoleApi.createAppDraftListingText(context, request)
+
+            assertInstanceOf<AppDraftListingTextAlreadyExistsError>(response.unwrapErr())
         }
     }
 
@@ -432,6 +497,8 @@ class ConsoleApiImplTest {
 
     private companion object {
         private val vertx = Vertx.vertx()
+        private val APP_NAME = AppName.fromString("SecureChat").unwrap()
+        private val SHORT_DESCRIPTION = AppShortDescription.fromString("Secure texting").unwrap()
 
         @JvmStatic
         private fun invalidListAppDraftSummariesPageTokens(): List<String> {

@@ -22,6 +22,17 @@ interface ConsoleApi {
     ): Either<CreateAppDraftError, CreateAppDraftResponse>
 
     /**
+     * Creates an app draft's listing text.
+     *
+     * @param context the context for this call.
+     * @param request the request parameters.
+     */
+    suspend fun createAppDraftListingText(
+        context: CallContext,
+        request: CreateAppDraftListingTextRequest,
+    ): Either<CreateAppDraftListingTextError, CreateAppDraftListingTextResponse>
+
+    /**
      * Deletes an app draft.
      *
      * @param context the context for this call.

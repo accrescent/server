@@ -18,10 +18,10 @@ import javax.sql.DataSource
  * it is not started.
  */
 object PostgresqlContainer {
-    // The minimum supported version of PostgreSQL is 17, so we test against that.
+    // The minimum supported version of PostgreSQL is 18, so we test against that.
     private val POSTGRESQL_IMAGE = DockerImageName
         .parse(
-            "postgres:17@sha256:7958605b474b3d264a969cb3a123d6aa00ad1e1fe9da8a69984dabb704d93317"
+            "postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4"
         )
         .asCompatibleSubstituteFor("postgres")
 

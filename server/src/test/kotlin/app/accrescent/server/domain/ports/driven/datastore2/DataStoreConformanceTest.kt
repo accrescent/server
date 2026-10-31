@@ -10,6 +10,8 @@ import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.core.unwrap2
 import app.accrescent.server.core.unwrapErr
+import app.accrescent.server.domain.appstore.AppName
+import app.accrescent.server.domain.appstore.AppShortDescription
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.crypto.Sha256Hash
 import arrow.core.None
@@ -279,6 +281,64 @@ abstract class DataStoreConformanceTest {
                 .unwrapErr()
 
             assertInstanceOf<DataStoreError.ConsistencyViolation>(error)
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraftListingText returns None if app draft already has listing text`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraftListingText("draft1", appName("Name"), shortDescription("Desc"))
+                    .bind()
+            }
+                .unwrap2()
+
+            val etag = dataStore.runInTransaction { tx ->
+                tx.createAppDraftListingText("draft1", appName("Other"), shortDescription("Other"))
+                    .bind()
+            }
+                .unwrap2()
+
+            assertEquals(None, etag)
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraftListingText returns ConsistencyViolation if app draft does not exist`() {
+        withMigratedDataStore { dataStore ->
+            val error = dataStore.runInTransaction { tx ->
+                tx.createAppDraftListingText("draft1", appName("Name"), shortDescription("Desc"))
+                    .bind()
+            }
+                .unwrap()
+                .unwrapErr()
+
+            assertInstanceOf<DataStoreError.ConsistencyViolation>(error)
+        }
+    }
+
+    @Test
+    suspend fun `createAppDraftListingText returns same etag for same content`() {
+        withMigratedDataStore { dataStore ->
+            dataStore.runInTransaction { tx ->
+                tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                tx.createAppDraft("draft2", "org1", UNIX_EPOCH).bind()
+            }
+                .unwrap2()
+
+            val etags = dataStore.runInTransaction { tx ->
+                listOf("draft1", "draft2").map {
+                    tx.createAppDraftListingText(it, appName("Name"), shortDescription("Desc"))
+                        .bind()
+                        .unwrap()
+                }
+            }
+                .unwrap2()
+
+            assertEquals(etags[0], etags[1])
         }
     }
 
@@ -795,6 +855,14 @@ abstract class DataStoreConformanceTest {
                 }
             },
             HasPermissionReturnsTrueWithMinimalRelationships(
+                HasPermissionRequest.EditAppDraftListing("draft1", "user1"),
+            ) { tx ->
+                either {
+                    tx.createOrgWithOwner("org1", "user1", ExternalUserId.Github(1), UNIX_EPOCH).bind()
+                    tx.createAppDraft("draft1", "org1", UNIX_EPOCH).bind()
+                }
+            },
+            HasPermissionReturnsTrueWithMinimalRelationships(
                 HasPermissionRequest.ViewAppDrafts("org1", "user1"),
             ) { tx ->
                 either {
@@ -809,5 +877,13 @@ abstract class DataStoreConformanceTest {
                 }
             },
         )
+
+        private fun appName(value: String): AppName {
+            return AppName.fromString(value).unwrap()
+        }
+
+        private fun shortDescription(value: String): AppShortDescription {
+            return AppShortDescription.fromString(value).unwrap()
+        }
     }
 }

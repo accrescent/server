@@ -5,7 +5,9 @@
 package app.accrescent.server.adapters.driving.api.console.grpc
 
 import app.accrescent.server.domain.ports.driving.api.console2.ActiveAppDraftLimitExceededError
+import app.accrescent.server.domain.ports.driving.api.console2.AppDraftListingTextAlreadyExistsError
 import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftError
+import app.accrescent.server.domain.ports.driving.api.console2.CreateAppDraftListingTextError
 import app.accrescent.server.domain.ports.driving.api.console2.DeleteAppDraftError
 import app.accrescent.server.domain.ports.driving.api.console2.GetMyOrganizationError
 import app.accrescent.server.domain.ports.driving.api.console2.GetOrganizationError
@@ -31,6 +33,18 @@ class ErrorConvertersTest {
     @MethodSource("toStatusCorrectlyConvertsCreateAppDraftErrorTestCases")
     fun `toStatus correctly converts CreateAppDraftError`(
         testCase: ToStatusCorrectlyConvertsCreateAppDraftErrorTestCase,
+    ) {
+        val status = toStatus(testCase.error)
+
+        assertEquals(testCase.expectedCode, Code.forNumber(status.code))
+        assertTrue(status.message.isNotEmpty())
+        assertEquals(testCase.expectedErrorInfo, unpackErrorInfo(status))
+    }
+
+    @ParameterizedTest
+    @MethodSource("toStatusCorrectlyConvertsCreateAppDraftListingTextErrorTestCases")
+    fun `toStatus correctly converts CreateAppDraftListingTextError`(
+        testCase: ToStatusCorrectlyConvertsCreateAppDraftListingTextErrorTestCase,
     ) {
         val status = toStatus(testCase.error)
 
@@ -118,6 +132,12 @@ class ErrorConvertersTest {
             val expectedErrorInfo: ErrorInfo,
         )
 
+        data class ToStatusCorrectlyConvertsCreateAppDraftListingTextErrorTestCase(
+            val error: CreateAppDraftListingTextError,
+            val expectedCode: Code,
+            val expectedErrorInfo: ErrorInfo,
+        )
+
         data class ToStatusCorrectlyConvertsDeleteAppDraftErrorTestCase(
             val error: DeleteAppDraftError,
             val expectedCode: Code,
@@ -172,6 +192,28 @@ class ErrorConvertersTest {
                     ActiveAppDraftLimitExceededError(),
                     Code.RESOURCE_EXHAUSTED,
                     errorInfo(ErrorReason.ERROR_REASON_RESOURCE_LIMIT_EXCEEDED),
+                ),
+            )
+        }
+
+        @JvmStatic
+        private fun toStatusCorrectlyConvertsCreateAppDraftListingTextErrorTestCases():
+                List<ToStatusCorrectlyConvertsCreateAppDraftListingTextErrorTestCase> {
+            return listOf(
+                ToStatusCorrectlyConvertsCreateAppDraftListingTextErrorTestCase(
+                    UnauthenticatedError(),
+                    Code.UNAUTHENTICATED,
+                    errorInfo(ErrorReason.ERROR_REASON_UNAUTHENTICATED),
+                ),
+                ToStatusCorrectlyConvertsCreateAppDraftListingTextErrorTestCase(
+                    InsufficientPermissionError(),
+                    Code.PERMISSION_DENIED,
+                    errorInfo(ErrorReason.ERROR_REASON_INSUFFICIENT_PERMISSION),
+                ),
+                ToStatusCorrectlyConvertsCreateAppDraftListingTextErrorTestCase(
+                    AppDraftListingTextAlreadyExistsError(),
+                    Code.ALREADY_EXISTS,
+                    errorInfo(ErrorReason.ERROR_REASON_ALREADY_EXISTS),
                 ),
             )
         }

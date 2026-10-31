@@ -8,6 +8,8 @@ import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.ThrowableError
 import app.accrescent.server.core.causedBy
+import app.accrescent.server.domain.appstore.AppName
+import app.accrescent.server.domain.appstore.AppShortDescription
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.crypto.Sha256Hash
 import app.accrescent.server.domain.ports.driven.datastore2.AppDraftSummaryApiView
@@ -107,6 +109,21 @@ class MemoryDataStore(vertx: Vertx) : DataStore {
             else -> Unit.right()
         }
     }
+
+    private companion object {
+        /**
+         * Returns the number of Unicode code points in a string.
+         *
+         * @param s the string to count the Unicode code points of.
+         * @return the number of Unicode code points in [s], or null if [s] is null.
+         */
+        // Used in data store SQL
+        @Suppress("UNUSED")
+        @JvmStatic
+        fun codePointLength(s: String?): Int? {
+            return s?.let { it.codePointCount(0, it.length) }
+        }
+    }
 }
 
 /**
@@ -135,6 +152,25 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
             "INSERT INTO app_drafts (id, organization_id, create_time) VALUES (?, ?, ?)",
             Tuple.of(appDraftId, organizationId, createTime),
         )
+    }
+
+    override suspend fun createAppDraftListingText(
+        appDraftId: String,
+        name: AppName,
+        shortDescription: AppShortDescription,
+    ): DataStoreResult<Option<String>> = either {
+        connection.executeOptionalQuery(
+            """
+            SELECT etag
+            FROM FINAL TABLE (
+                INSERT INTO app_draft_listing_texts (app_draft_id, name, short_description)
+                SELECT ?, ?, ?
+                WHERE NOT EXISTS(SELECT 1 FROM app_draft_listing_texts WHERE app_draft_id = ?)
+            )
+            """.trimIndent(),
+            Tuple.of(appDraftId, name.value, shortDescription.value, appDraftId),
+        )
+            .map { it.requireValue<String>(0) }
     }
 
     override suspend fun createOrgWithOwner(
@@ -261,7 +297,8 @@ private class MemoryTransaction(private val connection: SqlConnection) : DataSto
             is HasPermissionRequest.ViewOrganization ->
                 "SELECT EXISTS(SELECT 1 FROM organizations WHERE id = ? AND owner_user_id = ?)"
 
-            is HasPermissionRequest.DeleteAppDraft ->
+            is HasPermissionRequest.DeleteAppDraft,
+            is HasPermissionRequest.EditAppDraftListing ->
                 """
                 SELECT EXISTS(
                     SELECT 1

@@ -5,10 +5,15 @@
 package app.accrescent.server.adapters.driving.api.console.grpc
 
 import build.buf.gen.accrescent.console.v1.ErrorReason
+import build.buf.gen.accrescent.console.v1.StringRulesProto
+import build.buf.gen.buf.validate.StringRules
+import build.buf.protovalidate.Config
 import build.buf.protovalidate.Validator
 import build.buf.protovalidate.ValidatorFactory
 import build.buf.protovalidate.exceptions.ValidationException
+import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.Message
+import com.google.protobuf.TypeRegistry
 import io.grpc.ForwardingServerCall
 import io.grpc.ForwardingServerCallListener
 import io.grpc.Metadata
@@ -86,7 +91,18 @@ class RequestValidationInterceptor : ServerInterceptor {
 
     private companion object {
         private val logger = LoggerFactory.getLogger(RequestValidationInterceptor::class.java)
-        private val validator: Validator = ValidatorFactory.newBuilder().build()
+        private val validator: Validator = ValidatorFactory.newBuilder()
+            .withConfig(
+                Config.newBuilder()
+                    // Ensure the console API's predefined rules can be found
+                    .setExtensionRegistry(
+                        ExtensionRegistry.newInstance()
+                            .also(StringRulesProto::registerAllExtensions)
+                    )
+                    .setTypeRegistry(TypeRegistry.newBuilder().add(StringRules.getDescriptor()).build())
+                    .build(),
+            )
+            .build()
     }
 }
 

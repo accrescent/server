@@ -792,9 +792,9 @@ abstract class DataStoreConformanceTest {
 
             assertEquals(
                 listOf(
-                    AppDraftSummaryApiView("draft3", UNIX_EPOCH.plusSeconds(1)),
-                    AppDraftSummaryApiView("draft2", UNIX_EPOCH.plusSeconds(1)),
-                    AppDraftSummaryApiView("draft1", UNIX_EPOCH),
+                    AppDraftSummaryApiView("draft3", None, UNIX_EPOCH.plusSeconds(1)),
+                    AppDraftSummaryApiView("draft2", None, UNIX_EPOCH.plusSeconds(1)),
+                    AppDraftSummaryApiView("draft1", None, UNIX_EPOCH),
                 ),
                 appDraftSummaries,
             )
@@ -822,8 +822,8 @@ abstract class DataStoreConformanceTest {
 
             assertEquals(
                 listOf(
-                    AppDraftSummaryApiView("draft3", UNIX_EPOCH.plusSeconds(2)),
-                    AppDraftSummaryApiView("draft2", UNIX_EPOCH.plusSeconds(1)),
+                    AppDraftSummaryApiView("draft3", None, UNIX_EPOCH.plusSeconds(2)),
+                    AppDraftSummaryApiView("draft2", None, UNIX_EPOCH.plusSeconds(1)),
                 ),
                 appDraftSummaries,
             )
@@ -858,8 +858,8 @@ abstract class DataStoreConformanceTest {
 
             assertEquals(
                 listOf(
-                    AppDraftSummaryApiView("draft2", UNIX_EPOCH.plusSeconds(1)),
-                    AppDraftSummaryApiView("draft1", UNIX_EPOCH),
+                    AppDraftSummaryApiView("draft2", None, UNIX_EPOCH.plusSeconds(1)),
+                    AppDraftSummaryApiView("draft1", None, UNIX_EPOCH),
                 ),
                 appDraftSummaries,
             )

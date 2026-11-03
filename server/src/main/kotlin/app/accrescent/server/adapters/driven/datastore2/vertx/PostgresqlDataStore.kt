@@ -373,10 +373,12 @@ private class PostgresqlTransaction(
         val rows = when (after) {
             is None -> connection.executeQuery(
                 """
-                    SELECT id, create_time
+                    SELECT app_drafts.id, app_draft_listing_texts.name, app_drafts.create_time
                     FROM app_drafts
-                    WHERE organization_id = ?
-                    ORDER BY create_time DESC, id DESC
+                    LEFT JOIN app_draft_listing_texts
+                    ON app_draft_listing_texts.app_draft_id = app_drafts.id
+                    WHERE app_drafts.organization_id = ?
+                    ORDER BY app_drafts.create_time DESC, app_drafts.id DESC
                     LIMIT ?
                 """.trimIndent(),
                 Tuple.of(organizationId, maxResults.value),
@@ -384,10 +386,13 @@ private class PostgresqlTransaction(
 
             is Some -> connection.executeQuery(
                 """
-                    SELECT id, create_time
+                    SELECT app_drafts.id, app_draft_listing_texts.name, app_drafts.create_time
                     FROM app_drafts
-                    WHERE organization_id = ? AND (create_time, id) < (?, ?)
-                    ORDER BY create_time DESC, id DESC
+                    LEFT JOIN app_draft_listing_texts
+                    ON app_draft_listing_texts.app_draft_id = app_drafts.id
+                    WHERE app_drafts.organization_id = ?
+                    AND (app_drafts.create_time, app_drafts.id) < (?, ?)
+                    ORDER BY app_drafts.create_time DESC, app_drafts.id DESC
                     LIMIT ?
                 """.trimIndent(),
                 Tuple.of(organizationId, after.value.createTime, after.value.id, maxResults.value),
@@ -397,7 +402,8 @@ private class PostgresqlTransaction(
         rows.map {
             AppDraftSummaryApiView(
                 id = it.requireValue<String>(0),
-                createTime = it.requireValue<OffsetDateTime>(1),
+                name = it.getSafeValue<String>(1),
+                createTime = it.requireValue<OffsetDateTime>(2),
             )
         }
     }

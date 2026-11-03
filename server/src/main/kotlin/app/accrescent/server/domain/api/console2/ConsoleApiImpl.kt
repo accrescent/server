@@ -304,8 +304,8 @@ class ConsoleApiImpl(
 
         ListAppDraftSummariesResponse(
             appDraftSummaries = appDraftSummaries.map {
-                // App drafts can't have listings or packages yet, so don't set those fields yet
-                AppDraftSummary(it.id, None, None, None)
+                // App drafts can't have icons or packages yet, so don't set those fields yet
+                AppDraftSummary(it.id, it.name, None, None)
             },
             nextPageToken = nextPageToken,
         )

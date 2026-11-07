@@ -163,7 +163,12 @@ private fun toCode(reason: ErrorReason): Code {
         ErrorReason.ERROR_REASON_INTERNAL -> Code.INTERNAL
         ErrorReason.ERROR_REASON_SERVICE_UNAVAILABLE -> Code.UNAVAILABLE
         ErrorReason.ERROR_REASON_ALREADY_EXISTS -> Code.ALREADY_EXISTS
-        ErrorReason.ERROR_REASON_ETAG_MISMATCH -> Code.ABORTED
+        ErrorReason.ERROR_REASON_ETAG_MISMATCH,
+        ErrorReason.ERROR_REASON_EXPIRED -> Code.ABORTED
+
+        ErrorReason.ERROR_REASON_INVALID_PNG,
+        ErrorReason.ERROR_REASON_INVALID_IMAGE_DIMENSIONS -> Code.INVALID_ARGUMENT
+
         ErrorReason.ERROR_REASON_UNSPECIFIED, ErrorReason.UNRECOGNIZED -> Code.UNKNOWN
     }
 }

@@ -4,7 +4,7 @@
 
 [versions]
 agp = "9.5.0"
-apksig = "9.5.0"
+apksig = "9.5.1"
 appstore-api = "1.5.0.4.20260925233938.cd9cbc3ac813"
 arrow = "2.3.0"
 binary-resources = "32.5.1"

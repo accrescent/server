@@ -23,9 +23,11 @@ import io.vertx.core.VertxOptions
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandles
+import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import java.util.function.Supplier
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val SECRET_MANAGER_VAULT_NAME = "secret-manager"
 private const val VERSION = "0.16.0"
@@ -111,9 +113,10 @@ fun main() = runBlocking {
     }
 
     logger.info(
-        "Accrescent server {} started on {}",
+        "Accrescent server {} started on {} in {}",
         VERSION,
         InetSocketAddress(config.server.address, config.server.port.value.toInt())
             .let(NetUtil::toSocketAddressString),
+        ManagementFactory.getRuntimeMXBean().uptime.milliseconds,
     )
 }

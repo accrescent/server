@@ -20,6 +20,7 @@ import io.netty.util.NetUtil
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Vertx
 import io.vertx.core.VertxOptions
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandles
 import java.net.InetSocketAddress
@@ -29,9 +30,12 @@ import kotlin.system.exitProcess
 private const val SECRET_MANAGER_VAULT_NAME = "secret-manager"
 private const val VERSION = "0.16.0"
 
-fun main() {
-    val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+// Declared at the top level so that log messages show the correct class
+private val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
 
+// Use runBlocking rather than a `suspend main` so that main() resumes on the main thread instead of
+// whichever thread ran the last suspending call, e.g., a virtual thread from runOnVirtualThread
+fun main() = runBlocking {
     // Load configuration
     val config = SecretManagerSecretVault()
         .use { SmallRyeConfigLoader(mapOf(SECRET_MANAGER_VAULT_NAME to it)).loadConfig() }
@@ -103,7 +107,7 @@ fun main() {
         )
     } catch (_: IllegalStateException) {
         // The JVM is already shutting down, so there's nothing for us to do
-        return
+        return@runBlocking
     }
 
     logger.info(

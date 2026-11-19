@@ -341,7 +341,7 @@ class AuthnServerTest {
     private lateinit var server: HttpServer
 
     @BeforeEach
-    fun startServers() {
+    suspend fun startServers() {
         githubServer = vertx.createHttpServer()
             .requestHandler(::handleGithubRequest)
             .listen(0, "localhost")

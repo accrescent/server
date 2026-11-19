@@ -8,6 +8,7 @@ import app.accrescent.server.core.Error
 import app.accrescent.server.core.NonEmptyString
 import app.accrescent.server.core.TcpPort
 import app.accrescent.server.core.causedBy
+import app.accrescent.server.core.runOnVirtualThread
 import app.accrescent.server.core.unwrap
 import app.accrescent.server.domain.authn.ExternalUserId
 import app.accrescent.server.domain.config.ApplicationConfig
@@ -76,7 +77,10 @@ private const val DEFAULT_DATASTORE_CLOUD_SQL_IAM_AUTHN = false
  * handler names.
  */
 class SmallRyeConfigLoader(private val secretVaults: Map<String, SecretVault>) : ConfigLoader {
-    override fun loadConfig(): Either<ConfigLoadError, ApplicationConfig> = either {
+    override suspend fun loadConfig(): Either<ConfigLoadError, ApplicationConfig> =
+        runOnVirtualThread(::loadConfigBlocking)
+
+    private fun loadConfigBlocking(): Either<ConfigLoadError, ApplicationConfig> = either {
         val secretKeysHandlers = secretVaults
             .map { (name, vault) -> SecretVaultSecretKeysHandler(name, vault) }
             .toTypedArray()

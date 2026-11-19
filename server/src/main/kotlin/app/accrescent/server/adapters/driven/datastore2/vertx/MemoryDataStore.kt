@@ -8,6 +8,7 @@ import app.accrescent.server.core.NonNegativeInt
 import app.accrescent.server.core.PositiveInt
 import app.accrescent.server.core.ThrowableError
 import app.accrescent.server.core.causedBy
+import app.accrescent.server.core.runOnVirtualThread
 import app.accrescent.server.domain.appstore.AppName
 import app.accrescent.server.domain.appstore.AppShortDescription
 import app.accrescent.server.domain.authn.ExternalUserId
@@ -76,8 +77,8 @@ class MemoryDataStore(vertx: Vertx) : DataStore {
     private val pool: Pool =
         JDBCPool.pool(vertx, JDBCConnectOptions().setJdbcUrl(jdbcUrl), PoolOptions().setMaxSize(1))
 
-    override fun migrateToHead(): DataStoreResult<Unit> {
-        return try {
+    override suspend fun migrateToHead(): DataStoreResult<Unit> = runOnVirtualThread {
+        try {
             flyway.migrate()
             Unit.right()
         } catch (e: FlywayException) {

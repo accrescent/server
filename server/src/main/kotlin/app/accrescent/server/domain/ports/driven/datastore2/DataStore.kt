@@ -76,10 +76,10 @@ interface DataStore {
      * Applies all the data store's pending migrations.
      *
      * This method is idempotent and will return successfully if the data store is known to have no
-     * remaining pending migrations. Concurrent calls for the same backing data store will block
+     * remaining pending migrations. Concurrent calls for the same backing data store will suspend
      * until migration is complete.
      */
-    fun migrateToHead(): DataStoreResult<Unit>
+    suspend fun migrateToHead(): DataStoreResult<Unit>
 
     /**
      * Runs the given lambda in the context of a transaction.

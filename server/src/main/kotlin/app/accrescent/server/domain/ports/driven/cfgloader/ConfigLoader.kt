@@ -17,7 +17,7 @@ interface ConfigLoader {
     /**
      * Loads the application configuration from a source or sources.
      */
-    fun loadConfig(): Either<ConfigLoadError, ApplicationConfig>
+    suspend fun loadConfig(): Either<ConfigLoadError, ApplicationConfig>
 }
 
 /**

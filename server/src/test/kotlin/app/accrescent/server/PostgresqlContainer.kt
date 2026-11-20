@@ -21,6 +21,7 @@ object PostgresqlContainer {
     // The minimum supported version of PostgreSQL is 18, so we test against that.
     private val POSTGRESQL_IMAGE = DockerImageName
         .parse(
+            // renovate: datasource=docker
             "postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4"
         )
         .asCompatibleSubstituteFor("postgres")
